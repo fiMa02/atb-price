@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Ціни АТБ — історія цін</title>
+  <meta name="description" content="Неофіційний трекер цін АТБ: пошук товарів та графік зміни ціни.">
+  <meta name="theme-color" content="#1f5fbf">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap top__row">
+      <a href="#/" class="logo"><img src="icon.svg" alt="" width="28" height="28"> Ціни АТБ</a>
+      <span class="updated" id="updated"></span>
+    </div>
+    <div class="wrap filters" id="filters">
+      <input type="search" id="q" placeholder="Пошук товару…" autocomplete="off" aria-label="Пошук товару">
+      <div class="filters__row">
+        <select id="cat" aria-label="Категорія"><option value="">Усі категорії</option></select>
+        <select id="sort" aria-label="Сортування">
+          <option value="name">За назвою</option>
+          <option value="price-asc">Спершу дешевші</option>
+          <option value="price-desc">Спершу дорожчі</option>
+          <option value="discount">Найбільша знижка</option>
+          <option value="changed">Нещодавно змінені</option>
+        </select>
+        <label class="chk"><input type="checkbox" id="sale"> Акції</label>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap" id="app">
+    <p class="status">Завантаження…</p>
+  </main>
+
+  <footer class="wrap foot">
+    Неофіційний проєкт, не пов'язаний з АТБ-Маркет. Ціни зібрано з atbmarket.com для одного магазину й можуть відрізнятися.
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

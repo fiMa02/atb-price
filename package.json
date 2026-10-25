@@ -1,0 +1,13 @@
+{
+  "name": "atb-price",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "scrape": "node scraper/scrape.js",
+    "serve": "npx --yes serve site"
+  },
+  "type": "module",
+  "dependencies": {
+    "cheerio": "^1.0.0"
+  }
+}

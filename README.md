@@ -5,10 +5,14 @@
 ## Як це працює
 
 ```
-GitHub Actions (щодня 07:30)  →  scraper/scrape.js  →  site/data/*.json  →  коміт у репозиторій  →  GitHub Pages
+Планувальник Windows (щодня 07:30) → scripts/daily.ps1 → scraper/scrape.js → site/data/*.json → git push → GitHub Actions → GitHub Pages
 ```
 
-- **`scraper/scrape.js`** обходить 26 розділів каталогу atbmarket.com (усі сторінки) і збирає товари.
+Ціни збираються **з домашнього комп'ютера**: сайт АТБ (Cloudflare) блокує запити з серверів GitHub (HTTP 403). GitHub лише публікує сайт після кожного push.
+
+- **`scraper/scrape.js`** обходить усі розділи й підрозділи каталогу atbmarket.com (усі сторінки) і збирає товари.
+- **`scripts/daily.ps1`** — pull → збір → коміт → push. Журнал пишеться в `daily.log`.
+- **`scripts/install-task.ps1`** — реєструє щоденне завдання «ATB Price» у Планувальнику завдань.
 - **`site/data/products.json`** — поточний каталог (для пошуку і карток).
 - **`site/data/history/NN.json`** — історія цін, розбита на 100 файлів за `id % 100`. Зберігаються лише **зміни**: `[дата, ціна]` або `[дата, ціна, ціна_без_акції]`; `[дата, null]` означає, що товар зник з каталогу.
 - **`site/`** — статичний сайт на чистому JS без збірки. Графік намальовано вручну через SVG.
@@ -25,9 +29,14 @@ npm run serve    # відкрити сайт на http://localhost:3000
 
 1. Створіть репозиторій на GitHub і запуште проєкт.
 2. **Settings → Pages → Source: GitHub Actions.**
-3. **Actions → «Збір цін і публікація» → Run workflow**, щоб запустити вперше вручну.
+3. Зареєструйте щоденний збір (один раз):
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File scripts\install-task.ps1
+   ```
 
-Далі все працює саме: щодня новий коміт з цінами й оновлений сайт.
+Далі все працює саме: щодня комп'ютер збирає ціни й пушить їх, а GitHub оновлює сайт. Якщо комп'ютер о 07:30 вимкнений, збір запуститься, щойно його увімкнуть.
+
+Видалити завдання: `Unregister-ScheduledTask -TaskName 'ATB Price'`.
 
 ## Обмеження
 

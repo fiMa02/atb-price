@@ -79,6 +79,7 @@ async function loadData() {
   // Якщо вибраного розділу в цьому місті немає — скидаємо фільтр.
   if (filters.group && !groups.has(filters.group)) filters.group = '';
   fillCategories();
+  syncFavs();
 }
 
 // Підкатегорії лише вибраного розділу.
@@ -132,6 +133,193 @@ async function loadHistory(id) {
   return (await state.shards.get(shard))[id] || [];
 }
 
+// ---------- Обране і сповіщення ----------
+// favs[id] = { name, img, unit, target, seen: { місто: ціна } }.
+// seen — остання ціна, яку користувач бачив; «подешевшало» = поточна ціна нижча за seen
+// (і не вища за target, якщо його задано). Подорожчання тихо піднімає seen, щоб наступне зниження теж помітили.
+// Копія лежить у Cache Storage — її читає service worker для фонової перевірки (localStorage йому недоступний).
+
+const HEART = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.6-4.7-9.4-9.6C1.4 7.6 3.6 4.5 7 4.5c2 0 3.5 1.1 5 3 1.5-1.9 3-3 5-3 3.4 0 5.6 3.1 4.4 6.4-1.8 4.9-9.4 9.6-9.4 9.6Z"/></svg>';
+const STATE_CACHE = 'pricetrail-state';
+let favs = {};
+try {
+  favs = JSON.parse(store.get('favs') || '{}');
+} catch {}
+const isFav = (id) => id in favs;
+
+function saveFavs() {
+  store.set('favs', JSON.stringify(favs));
+  if ('caches' in window) {
+    caches
+      .open(STATE_CACHE)
+      .then((c) => c.put('state/favs', new Response(JSON.stringify({ favs, city: state.city.slug }))))
+      .catch(() => {});
+  }
+  updateFavBadge();
+}
+
+function toggleFav(p) {
+  if (isFav(p.id)) delete favs[p.id];
+  else favs[p.id] = { name: p.name, img: p.img, unit: p.unit, target: null, seen: { [state.city.slug]: p.price } };
+  saveFavs();
+}
+
+const favDrop = (p, f) => {
+  const seen = f.seen?.[state.city.slug];
+  return seen != null && p.price < seen - 0.004 && (!f.target || p.price <= f.target);
+};
+const favHits = () =>
+  Object.entries(favs)
+    .map(([id, f]) => ({ p: state.byId.get(+id), f }))
+    .filter(({ p, f }) => p && favDrop(p, f));
+
+function markSeen(ids) {
+  for (const id of ids) {
+    const p = state.byId.get(id);
+    if (p && favs[id]) favs[id].seen = { ...favs[id].seen, [state.city.slug]: p.price };
+  }
+  saveFavs();
+}
+
+// Після завантаження міста: ціна, яку ще не бачили, стає «баченою»; подорожчання піднімає seen.
+function syncFavs() {
+  for (const [id, f] of Object.entries(favs)) {
+    const p = state.byId.get(+id);
+    if (!p) continue;
+    Object.assign(f, { name: p.name, img: p.img, unit: p.unit });
+    const seen = f.seen?.[state.city.slug];
+    if (seen == null || p.price > seen) f.seen = { ...f.seen, [state.city.slug]: p.price };
+  }
+  saveFavs();
+}
+
+function updateFavBadge() {
+  const n = state.byId.size ? favHits().length : 0;
+  const el = $('#favN');
+  el.textContent = n;
+  el.hidden = !n;
+  $('#favLink').setAttribute('aria-label', n ? `Обране: подешевшало ${n}` : 'Обране');
+}
+
+// Підказка при відкритті сайту — раз за сесію на той самий набір знижок.
+function favToast() {
+  const hits = favHits();
+  const sig = hits.map(({ p }) => `${p.id}:${p.price}`).join();
+  if (!hits.length || location.hash === '#/fav') return;
+  try {
+    if (sessionStorage.getItem('favToast') === sig) return;
+    sessionStorage.setItem('favToast', sig);
+  } catch {}
+  const t = document.createElement('a');
+  t.className = 'toast';
+  t.href = '#/fav';
+  t.innerHTML = `${HEART}<span>${hits.length === 1 ? `Подешевшало: ${esc(hits[0].p.name)}` : `З обраного подешевшало товарів: ${hits.length}`}</span>`;
+  t.onclick = () => t.remove();
+  document.body.append(t);
+  setTimeout(() => t.remove(), 7000);
+}
+
+// Фонова перевірка (Periodic Background Sync): Chrome/Edge, коли сайт встановлено як застосунок.
+async function registerPeriodicCheck() {
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    if (!('periodicSync' in reg)) return false;
+    const perm = await navigator.permissions.query({ name: 'periodic-background-sync' });
+    if (perm.state !== 'granted') return false;
+    await reg.periodicSync.register('prices', { minInterval: 12 * 3600 * 1000 });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function notifyPanel() {
+  const el = $('#notify');
+  if (!el) return;
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+    el.innerHTML = '<p class="note">Цей браузер не підтримує сповіщення. Подешевшання з обраного видно тут і на значку ♥ угорі.</p>';
+    return;
+  }
+  const perm = Notification.permission;
+  if (perm === 'denied') {
+    el.innerHTML = '<p class="note">🔕 Сповіщення заблоковано в налаштуваннях браузера для цього сайту.</p>';
+    return;
+  }
+  if (perm === 'default') {
+    el.innerHTML = `<button class="btn btn--primary" id="notifyOn">🔔 Увімкнути сповіщення</button>
+      <p class="note">Повідомимо, коли товар з обраного подешевшає або ціна опуститься до вказаної вами.</p>`;
+    $('#notifyOn').onclick = async () => {
+      await Notification.requestPermission();
+      notifyPanel();
+    };
+    return;
+  }
+  const bg = await registerPeriodicCheck();
+  if (!$('#notify')) return;
+  el.innerHTML = bg
+    ? '<p class="note">🔔 Сповіщення увімкнено: ціни з обраного перевіряються у фоні раз на день, навіть коли сайт закрито.</p>'
+    : '<p class="note">🔔 Сповіщення дозволено, але фонова перевірка в цьому браузері недоступна. Вона працює в Chrome або Edge, якщо встановити PriceTrail як застосунок (меню браузера → «Встановити» / «Додати на головний екран»). Доти подешевшання видно тут і на значку ♥ угорі.</p>';
+}
+
+function renderFavs() {
+  document.querySelector('.top').classList.add('is-product');
+  document.title = 'Обране — PriceTrail';
+  scrollTo(0, 0);
+  const items = Object.entries(favs).map(([id, f]) => ({ id: +id, f, p: state.byId.get(+id) }));
+  const hits = items.filter(({ p, f }) => p && favDrop(p, f));
+  const rest = items
+    .filter((x) => !hits.includes(x))
+    .sort((a, b) => (a.p ? 0 : 1) - (b.p ? 0 : 1) || a.f.name.localeCompare(b.f.name, 'uk'));
+  const missing = ({ id, f }) => `<div class="card card--missing">
+      <div class="card__media"><img class="card__img" src="${esc(f.img)}" alt="" loading="lazy"><button class="fav-btn" data-fav="${id}" aria-pressed="true" aria-label="Прибрати з обраного">${HEART}</button></div>
+      <div class="card__body"><div class="card__name">${esc(f.name)}</div><div class="note">Немає в цьому магазині</div></div>
+    </div>`;
+  const tile = (x) => (x.p ? card(x.p, x.f.seen?.[state.city.slug]) : missing(x));
+  let html = '<a class="back" href="#/">← Усі товари</a><h1 class="page-title">Обране</h1><div class="panel notify" id="notify"></div>';
+  if (!items.length) {
+    html += '<div class="empty"><b>♡</b>Тут поки порожньо<br><span class="note">Натисніть ♡ на картці товару — і ми підкажемо, коли він подешевшає</span></div>';
+  } else {
+    if (hits.length) {
+      html += `<div class="section-head"><h2>Подешевшало · ${hits.length}</h2><button id="seenAll">Позначити переглянутим</button></div>
+        <div class="grid">${hits.map(tile).join('')}</div>`;
+    }
+    if (rest.length) {
+      html += `<div class="section-head"><h2>${hits.length ? 'Решта обраного' : 'Усі обрані'} · ${rest.length}</h2></div>
+        <div class="grid">${rest.map(tile).join('')}</div>`;
+    }
+  }
+  app.innerHTML = html;
+  notifyPanel();
+  const seenAll = $('#seenAll');
+  if (seenAll) {
+    seenAll.onclick = () => {
+      markSeen(hits.map((x) => x.id));
+      renderFavs();
+    };
+  }
+}
+
+function favActions(p) {
+  const f = favs[p.id];
+  return `<button class="btn fav-toggle" data-fav="${p.id}" aria-pressed="${!!f}">${HEART}${f ? 'В обраному' : 'Стежити за ціною'}</button>
+    ${
+      f
+        ? `<label class="fav-target">Сповістити, коли подешевшає, або лише коли ціна не вища за
+            <input type="number" id="favTarget" min="0" step="0.01" inputmode="decimal" placeholder="${fmtPrice(p.price * 0.9)}" value="${f.target ?? ''}"> грн</label>`
+        : ''
+    }`;
+}
+
+function bindFavTarget(p) {
+  const input = $('#favTarget');
+  if (!input) return;
+  input.onchange = () => {
+    const v = parseFloat(input.value.replace(',', '.'));
+    favs[p.id].target = v > 0 ? v : null;
+    saveFavs();
+  };
+}
+
 // ---------- Фільтри ----------
 
 const filters = { q: '', group: '', cat: '', sort: 'name', sale: false };
@@ -149,7 +337,7 @@ function applyFilters() {
     sessionStorage.setItem('filters', JSON.stringify(filters));
   } catch {}
   state.shown = PAGE;
-  if (location.hash.startsWith('#/p/')) location.hash = '#/';
+  if (location.hash.startsWith('#/p/') || location.hash === '#/fav') location.hash = '#/';
   else renderList();
 }
 
@@ -166,6 +354,28 @@ function bindFilters() {
     filters.sale = $('#sale').checked;
     applyFilters();
   };
+  // Серце на картці (вона — посилання, тож не даємо перейти) і кнопка на сторінці товару.
+  app.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-fav]');
+    if (!b) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const id = Number(b.dataset.fav);
+    const p = state.byId.get(id);
+    if (p) toggleFav(p);
+    else {
+      delete favs[id];
+      saveFavs();
+    }
+    if (location.hash === '#/fav') return renderFavs();
+    if (b.classList.contains('fav-toggle')) {
+      $('.fav-actions').innerHTML = favActions(p);
+      bindFavTarget(p);
+      return;
+    }
+    b.setAttribute('aria-pressed', isFav(id));
+    b.setAttribute('aria-label', isFav(id) ? 'Прибрати з обраного' : 'Додати в обране');
+  });
   // Клік по чипу розділу (ряд чипів перемальовується разом зі списком, тому делегуємо).
   app.addEventListener('click', (e) => {
     const chip = e.target.closest('[data-group]');
@@ -207,13 +417,16 @@ function filtered() {
 
 // ---------- Список ----------
 
-function card(p) {
+// from — ціна, з якої подешевшав товар з обраного (показуємо на сторінці «Обране»).
+function card(p, from) {
   const sale = p.oldPrice ? `<span class="badge">−${Math.round(discount(p) * 100)}%</span>` : '';
   let flags = '';
   if (isInflated(p.oldPrice, p.regular)) {
     flags += `<span class="tag tag--warn" title="Перед акцією було ${fmtPrice(p.regular)} грн — ціну до знижки завищено">⚠ до акції ${fmtPrice(p.regular)}</span>`;
   }
-  if (p.prev && p.prev !== p.price && !p.oldPrice) {
+  if (from != null && p.price < from - 0.004) {
+    flags += `<span class="tag tag--down" title="Ви бачили ціну ${fmtPrice(from)}">↓ було ${fmtPrice(from)}</span>`;
+  } else if (p.prev && p.prev !== p.price && !p.oldPrice) {
     const up = p.price > p.prev;
     const change = Math.abs((p.price / p.prev - 1) * 100);
     flags += `<span class="tag tag--${up ? 'up' : 'down'}" title="Було ${fmtPrice(p.prev)}">${up ? '↑' : '↓'} ${change < 1 ? change.toFixed(1).replace('.', ',') : Math.round(change)}%</span>`;
@@ -222,6 +435,7 @@ function card(p) {
     <div class="card__media">
       <img class="card__img" src="${esc(p.img)}" alt="" loading="lazy" decoding="async">
       ${sale}
+      <button class="fav-btn" data-fav="${p.id}" aria-pressed="${isFav(p.id)}" aria-label="${isFav(p.id) ? 'Прибрати з обраного' : 'Додати в обране'}">${HEART}</button>
     </div>
     <div class="card__body">
       <div class="card__name">${esc(p.name)}</div>
@@ -394,7 +608,7 @@ async function renderProduct(id) {
           ${labelsHtml(p)}
         </div>
         <div id="warn"></div>
-        <div class="product__actions"><a class="btn btn--primary" href="https://www.atbmarket.com${esc(p.url)}" target="_blank" rel="noopener">Відкрити на atbmarket.com ↗</a></div>
+        <div class="product__actions"><span class="fav-actions">${favActions(p)}</span><a class="btn btn--primary" href="https://www.atbmarket.com${esc(p.url)}" target="_blank" rel="noopener">Відкрити на atbmarket.com ↗</a></div>
       </div>
     </div>
     <section class="panel">
@@ -405,6 +619,9 @@ async function renderProduct(id) {
       <div class="chart" id="chart"><div class="sk" style="height:280px;border-radius:12px"></div></div>
       <div id="stats"></div>
     </section>`;
+  bindFavTarget(p);
+  // Користувач побачив поточну ціну — знижка «з обраного» для цього товару вже не нова.
+  if (isFav(id) && favDrop(p, favs[id])) markSeen([id]);
 
   const hist = await loadHistory(id);
   if (state.byId.get(id) !== p || !$('#chart')) return;
@@ -624,7 +841,10 @@ function renderStats(el, hist, days, unit) {
 
 function route() {
   const m = location.hash.match(/^#\/p\/(\d+)/);
-  const render = () => (m ? renderProduct(Number(m[1])) : renderList());
+  const onFavs = location.hash === '#/fav';
+  if (onFavs) $('#favLink').setAttribute('aria-current', 'page');
+  else $('#favLink').removeAttribute('aria-current');
+  const render = () => (m ? renderProduct(Number(m[1])) : onFavs ? renderFavs() : renderList());
   if (document.startViewTransition && !matchMedia('(prefers-reduced-motion: reduce)').matches) document.startViewTransition(render);
   else render();
 }
@@ -636,6 +856,7 @@ loadCities()
     bindFilters();
     addEventListener('hashchange', route);
     route();
+    favToast();
   })
   .catch((err) => {
     console.error(err);

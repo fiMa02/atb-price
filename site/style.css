@@ -89,7 +89,27 @@ svg { flex: none; }
 .city-pick {
   display: flex; align-items: center; gap: 4px;
   background: var(--surface); border: 1px solid var(--line); border-radius: 999px;
-  padding-left: 12px; min-width: 0; max-width: 60%;
+  padding-left: 12px; min-width: 0;
+}
+.top__actions { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.logo { flex: none; }
+
+/* Обране: кнопка в шапці з лічильником подешевшань */
+.fav-link {
+  position: relative; flex: none; display: inline-grid; place-items: center;
+  width: 40px; height: 40px; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--line); color: var(--ink); text-decoration: none;
+}
+.fav-link[aria-current] { color: var(--sale); }
+.fav-link__n[hidden] { display: none; }
+.fav-link:hover { border-color: color-mix(in srgb, var(--sale) 40%, var(--line)); }
+.fav-link svg, .fav-btn svg, .fav-toggle svg, .toast svg {
+  width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round;
+}
+.fav-link__n {
+  position: absolute; top: -5px; right: -5px; min-width: 19px; height: 19px; padding: 0 5px;
+  display: grid; place-items: center; border-radius: 999px; border: 2px solid var(--bg);
+  background: var(--sale); color: #fff; font-size: 11px; font-weight: 700; line-height: 1;
 }
 .city-pick svg { width: 16px; height: 16px; fill: none; stroke: var(--accent); stroke-width: 2.2; }
 .city-pick select { border: 0; background: transparent; font-weight: 600; padding: 8px 32px 8px 2px; min-width: 0; }
@@ -227,6 +247,51 @@ select {
 .tag--warn { color: var(--warn); background: var(--warn-soft); }
 .more { display: block; margin: 20px auto; }
 
+/* Серце на картці */
+.fav-btn {
+  position: absolute; top: 6px; right: 6px; width: 34px; height: 34px; padding: 0; justify-content: center;
+  border: 0; color: #8a92a3; background: rgba(255, 255, 255, 0.88); box-shadow: 0 1px 4px rgba(18, 21, 28, 0.12);
+}
+.fav-btn:hover { color: var(--sale); }
+.fav-btn[aria-pressed=true] { color: #e5372b; }
+.fav-btn[aria-pressed=true] svg, .fav-toggle[aria-pressed=true] svg, .fav-link[aria-current] svg, .toast svg { fill: currentColor; }
+@media (hover: hover) {
+  .card .fav-btn[aria-pressed=false] { opacity: 0; transition: opacity .15s; }
+  .card:hover .fav-btn, .card .fav-btn:focus-visible { opacity: 1; }
+}
+.card--missing { opacity: .6; }
+.card--missing .card__body { gap: 4px; }
+
+/* Сторінка «Обране» */
+.page-title { font-size: clamp(22px, 3vw, 28px); letter-spacing: -0.02em; margin: 0 0 12px; }
+.notify { display: flex; align-items: center; gap: 10px 16px; flex-wrap: wrap; margin: 0 0 8px; padding: 14px 16px; }
+.notify .note { margin: 0; flex: 1 1 260px; }
+.section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 22px 2px 10px; }
+.section-head h2 { font-size: 17px; letter-spacing: -0.01em; margin: 0; }
+.section-head button { padding: 7px 14px; font-size: 13px; }
+
+/* Сторінка товару: «Стежити за ціною» */
+.fav-actions { display: contents; }
+.fav-toggle[aria-pressed=true] { color: var(--sale); background: var(--sale-soft); border-color: transparent; }
+.fav-target { flex-basis: 100%; order: 3; display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; font-size: 13.5px; color: var(--ink-2); }
+.fav-target input {
+  width: 96px; font: inherit; font-weight: 600; color: var(--ink);
+  padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface);
+}
+.fav-target input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+
+/* Підказка «подешевшало» */
+.toast {
+  position: fixed; z-index: 30; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+  display: flex; align-items: center; gap: 10px; max-width: calc(100% - 32px);
+  background: var(--ink); color: var(--bg); text-decoration: none; font-weight: 600; font-size: 14px;
+  padding: 12px 18px; border-radius: 999px; box-shadow: 0 10px 30px rgba(0, 0, 0, .25);
+  animation: toast-in .3s ease;
+}
+.toast svg { color: #ff6b5e; }
+.toast span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@keyframes toast-in { from { opacity: 0; transform: translate(-50%, 12px); } }
+
 /* Скелетони під час завантаження */
 .skeleton .card__media, .sk {
   background: linear-gradient(90deg, var(--surface-2) 25%, var(--line) 50%, var(--surface-2) 75%);
@@ -277,7 +342,7 @@ button:hover, .btn:hover { border-color: var(--accent); }
 .product__price .old { font-size: 16px; }
 .product__label { display: inline-block; background: var(--sale-soft); color: var(--sale); border-radius: 999px; padding: 4px 10px; font-size: 13px; font-weight: 700; }
 .product__promo { display: inline-block; background: var(--accent-soft); color: var(--accent); border-radius: 999px; padding: 4px 10px; font-size: 13px; font-weight: 600; }
-.product__actions { margin-top: 16px; }
+.product__actions { margin-top: 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 
 .panel { background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow); padding: 18px; margin-top: 16px; }
 .panel__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }

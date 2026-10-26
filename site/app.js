@@ -18,6 +18,9 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const norm = (s) => s.toLowerCase().replace(/ё/g, 'е').replace(/[’'`ʼ]/g, '');
 const discount = (p) => (p.oldPrice ? 1 - p.price / p.oldPrice : 0);
 const inflation = (p) => (isInflated(p.oldPrice, p.regular) ? p.oldPrice / p.regular - 1 : 0);
+// Реальна знижка: від меншої з цін — «до знижки» чи тієї, що була перед акцією.
+// Без акції — 0; якщо «акційна» ціна не нижча за звичайну — від'ємна.
+const realSaving = (p) => (p.oldPrice ? 1 - p.price / Math.min(p.oldPrice, p.regular || p.oldPrice) : 0);
 
 // ---------- Дані ----------
 
@@ -194,6 +197,8 @@ function filtered() {
     discount: (a, b) => discount(b) - discount(a),
     // На скільки «ціна до знижки» вища за звичайну ціну перед акцією; незавищені — після, за назвою.
     inflated: (a, b) => inflation(b) - inflation(a),
+    // Акції з найбільшою реальною знижкою; далі товари без акції, наприкінці — фіктивні акції.
+    real: (a, b) => realSaving(b) - realSaving(a),
     changed: (a, b) => (b.changed || '').localeCompare(a.changed || ''),
   };
   if (sorters[filters.sort]) list = [...list].sort(sorters[filters.sort]);
@@ -317,6 +322,10 @@ function renderList() {
   if (filters.sort === 'inflated') {
     const n = list.filter((p) => inflation(p) > 0).length;
     count += n ? ` · із завищеною «ціною до знижки»: ${n}` : ' · акцій із завищеною «ціною до знижки» поки не виявлено';
+  }
+  if (filters.sort === 'real') {
+    const n = list.filter((p) => realSaving(p) > 0.005).length;
+    count += ` · реальних акцій: ${n.toLocaleString('uk')}`;
   }
   app.innerHTML = `${groupsRow}<p class="count">${count}</p>
     <div class="grid">${list.slice(0, state.shown).map(card).join('')}</div>

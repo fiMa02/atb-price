@@ -151,16 +151,22 @@ select {
 .groups { -webkit-user-select: none; user-select: none; }
 .groups.is-dragging { cursor: grabbing; }
 .groups.is-dragging .gchip { pointer-events: none; }
-.gscroll {
-  position: absolute; top: 50%; z-index: 1; transform: translateY(-50%);
-  width: 38px; height: 38px; padding: 0; justify-content: center;
-  font-size: 22px; line-height: 1; font-weight: 500;
-  background: var(--surface); box-shadow: var(--shadow-hover);
+.gscroll { display: none; }
+/* З мишею — стрілки обабіч ряду (а не поверх чипів); на сенсорних екранах їх немає, там свайп. */
+@media (hover: hover) {
+  .groups-wrap { display: flex; align-items: center; gap: 6px; margin-top: 16px; }
+  .groups-wrap .groups {
+    flex: 1; min-width: 0; margin: 0; padding: 2px 12px 4px; scroll-padding-inline: 12px;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 12px), transparent);
+    mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 12px), transparent);
+  }
+  .gscroll {
+    display: inline-flex; flex: none; width: 36px; height: 36px; padding: 0; justify-content: center;
+    font-size: 22px; line-height: 1; font-weight: 500;
+    background: var(--surface); box-shadow: var(--shadow);
+  }
+  .gscroll:disabled { opacity: .35; pointer-events: none; }
 }
-.gscroll--left { left: -6px; }
-.gscroll--right { right: -6px; }
-/* На сенсорних екранах стрілки не потрібні — там свайп. */
-@media (hover: none) { .gscroll { display: none; } }
 .gchip {
   flex: none; display: inline-flex; align-items: center; gap: 7px;
   padding: 8px 14px; font-size: 14px; font-weight: 500; white-space: nowrap;

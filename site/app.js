@@ -238,8 +238,8 @@ function initGroupsRow(scrollLeft) {
   const left = $('.gscroll--left');
   const right = $('.gscroll--right');
   const updateArrows = () => {
-    left.hidden = row.scrollLeft <= 2;
-    right.hidden = row.scrollLeft + row.clientWidth >= row.scrollWidth - 2;
+    left.disabled = row.scrollLeft <= 2;
+    right.disabled = row.scrollLeft + row.clientWidth >= row.scrollWidth - 2;
   };
   if (scrollLeft != null) row.scrollLeft = scrollLeft;
   else {
@@ -302,11 +302,11 @@ function renderList() {
   const chip = (g, label, n) =>
     `<button class="gchip" data-group="${esc(g)}" aria-pressed="${filters.group === g}">${label}${n != null ? `<small>${n}</small>` : ''}</button>`;
   const groupsRow = `<div class="groups-wrap">
-    <button class="gscroll gscroll--left" data-dir="-1" aria-label="Прокрутити розділи ліворуч" hidden>‹</button>
+    <button class="gscroll gscroll--left" data-dir="-1" aria-label="Прокрутити розділи ліворуч">‹</button>
     <nav class="groups" aria-label="Розділи">${chip('', 'Усі товари')}${state.groups
       .map(([g, n]) => chip(g, `<span aria-hidden="true">${GROUPS.get(g) || '📦'}</span>${esc(g)}`, n))
       .join('')}</nav>
-    <button class="gscroll gscroll--right" data-dir="1" aria-label="Прокрутити розділи праворуч" hidden>›</button>
+    <button class="gscroll gscroll--right" data-dir="1" aria-label="Прокрутити розділи праворуч">›</button>
   </div>`;
   if (!list.length) {
     app.innerHTML = `${groupsRow}<div class="empty"><b>🔍</b>Нічого не знайдено<br><span class="note">Спробуйте іншу назву або приберіть фільтри</span></div>`;

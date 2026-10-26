@@ -297,6 +297,26 @@ select {
   .crow__track { display: none; }
 }
 
+/* Що змінилося */
+.today-banner {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 4px 14px; margin-top: 16px;
+  padding: 11px 16px; border-radius: var(--r-md); background: var(--surface); box-shadow: var(--shadow);
+  text-decoration: none; font-size: 14px; font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums;
+}
+.today-banner b { color: var(--ink); }
+.today-banner:hover { box-shadow: var(--shadow-hover); }
+.tb__down { color: var(--good); }
+.tb__up { color: var(--sale); }
+.today-banner__go { margin-left: auto; color: var(--accent); }
+.today-sub { margin: -4px 0 14px; }
+.today-tabs { display: flex; flex-wrap: wrap; width: fit-content; max-width: 100%; margin-bottom: 16px; border-radius: var(--r-md); }
+.today-tabs a {
+  padding: 7px 12px; border-radius: calc(var(--r-md) - 3px); font-size: 13.5px; font-weight: 600;
+  color: var(--ink-2); text-decoration: none; white-space: nowrap;
+}
+.today-tabs a small { color: var(--muted); font-weight: 500; margin-left: 2px; }
+.today-tabs a[aria-selected=true] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+
 /* Сторінка «Обране» */
 .page-title { font-size: clamp(22px, 3vw, 28px); letter-spacing: -0.02em; margin: 0 0 12px; }
 .notify { display: flex; align-items: center; gap: 10px 16px; flex-wrap: wrap; margin: 0 0 8px; padding: 14px 16px; }

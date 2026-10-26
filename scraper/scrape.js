@@ -14,6 +14,7 @@ import { promisify } from 'node:util';
 import { CITIES } from './cities.js';
 import { buildGroupMap, groupOf } from './groups.js';
 import { buildCompare } from './compare.js';
+import { writeChanges } from './changes.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -219,13 +220,14 @@ async function scrapeCity(city, store, categories, groupMap) {
     shards.push(await readJson(path.join(historyDir, `${String(i).padStart(2, '0')}.json`), {}));
   }
   let changed = 0;
+  const same = (h, p) => h && h[1] === p.price && (h[2] ?? null) === p.oldPrice;
   for (const p of products.values()) {
     p.group = groupOf(p.category, groupMap);
     const hist = (shards[p.id % SHARDS][p.id] ||= []);
-    const last = hist.at(-1);
-    if (!last || last[1] !== p.price || (last[2] ?? null) !== p.oldPrice) {
-      if (last && last[0] === today) hist.pop();
-      hist.push(p.oldPrice ? [today, p.price, p.oldPrice] : [today, p.price]);
+    if (!same(hist.at(-1), p)) {
+      // Повторний збір того ж дня замінює сьогоднішній запис (і не дублює вчорашню ціну).
+      if (hist.at(-1)?.[0] === today) hist.pop();
+      if (!same(hist.at(-1), p)) hist.push(p.oldPrice ? [today, p.price, p.oldPrice] : [today, p.price]);
       changed++;
     }
     // Для карток: коли востаннє змінилась ціна і якою була до того.
@@ -246,6 +248,7 @@ async function scrapeCity(city, store, categories, groupMap) {
   for (let i = 0; i < SHARDS; i++) {
     await fs.writeFile(path.join(historyDir, `${String(i).padStart(2, '0')}.json`), JSON.stringify(shards[i]));
   }
+  await writeChanges(dir, shards, products, today);
 
   const list = [...products.values()].sort((a, b) => a.name.localeCompare(b.name, 'uk'));
   await fs.writeFile(path.join(dir, 'products.json'), JSON.stringify(list));

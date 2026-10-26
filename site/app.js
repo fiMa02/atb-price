@@ -114,6 +114,9 @@ async function loadData() {
   }
   state.products = products;
   state.meta = meta;
+  state.changes = await fetch(`${cityDir()}/changes.json`)
+    .then((r) => (r.ok ? r.json() : null))
+    .catch(() => null);
   $('#updated').textContent = `${state.city.name}, магазин: ${meta.store.address} · ${meta.productCount.toLocaleString('uk')} товарів · оновлено ${fmtDate(parseDate(meta.updated))}`;
 
   const groups = new Map();
@@ -381,7 +384,7 @@ function applyFilters() {
     sessionStorage.setItem('filters', JSON.stringify(filters));
   } catch {}
   state.shown = PAGE;
-  if (location.hash.startsWith('#/p/') || location.hash === '#/fav') location.hash = '#/';
+  if (location.hash.startsWith('#/p/') || location.hash === '#/fav' || location.hash.startsWith('#/today')) location.hash = '#/';
   else renderList();
 }
 
@@ -466,15 +469,16 @@ function filtered() {
 
 // ---------- Список ----------
 
-// from — ціна, з якої подешевшав товар з обраного (показуємо на сторінці «Обране»).
+// from — попередня ціна, яку показуємо поруч («↓ було 34,90»): на сторінках «Обране» і «Що змінилося».
 function card(p, from) {
   const sale = p.oldPrice ? `<span class="badge">−${Math.round(discount(p) * 100)}%</span>` : '';
   let flags = '';
   if (isInflated(p.oldPrice, p.regular)) {
     flags += `<span class="tag tag--warn" title="Перед акцією було ${fmtPrice(p.regular)} грн — ціну до знижки завищено">⚠ до акції ${fmtPrice(p.regular)}</span>`;
   }
-  if (from != null && p.price < from - 0.004) {
-    flags += `<span class="tag tag--down" title="Ви бачили ціну ${fmtPrice(from)}">↓ було ${fmtPrice(from)}</span>`;
+  if (from != null && Math.abs(p.price - from) > 0.004) {
+    const up = p.price > from;
+    flags += `<span class="tag tag--${up ? 'up' : 'down'}" title="Попередня ціна ${fmtPrice(from)} грн">${up ? '↑' : '↓'} було ${fmtPrice(from)}</span>`;
   } else if (p.prev && p.prev !== p.price && !p.oldPrice) {
     const up = p.price > p.prev;
     const change = Math.abs((p.price / p.prev - 1) * 100);
@@ -562,6 +566,74 @@ function initGroupsRow(scrollLeft) {
   row.addEventListener('pointerleave', end);
 }
 
+// ---------- Що змінилося ----------
+// changes.json будує scraper/changes.js: зміни останнього збору відносно попереднього дня.
+
+const changeKind = (c) => (!c.fromOld && c.toOld ? 'sale' : c.fromOld && !c.toOld ? 'saleEnd' : c.to < c.from ? 'down' : 'up');
+const pctChange = (c) => (c.to / c.from - 1) * 100;
+
+function todayData() {
+  const ch = state.changes;
+  if (!ch) return null;
+  const rows = ch.prices.map((c) => ({ c, p: state.byId.get(c.id), kind: changeKind(c) })).filter((r) => r.p);
+  const tabs = [
+    ['down', '↓ Подешевшало', rows.filter((r) => r.c.to < r.c.from).sort((a, b) => pctChange(a.c) - pctChange(b.c))],
+    ['up', '↑ Подорожчало', rows.filter((r) => r.c.to > r.c.from).sort((a, b) => pctChange(b.c) - pctChange(a.c))],
+    ['sale', '% Нові акції', rows.filter((r) => r.kind === 'sale').sort((a, b) => discount(b.p) - discount(a.p))],
+    ['new', '✦ Нові товари', ch.added.map((id) => ({ p: state.byId.get(id) })).filter((r) => r.p)],
+    ['gone', '✕ Зникли', ch.removed.map((r) => ({ gone: r }))],
+  ];
+  return { date: ch.date, tabs };
+}
+
+function todayBanner() {
+  const d = todayData();
+  if (!d) return '';
+  const n = (k) => d.tabs.find((t) => t[0] === k)[2].length;
+  const parts = [
+    n('down') && `<span class="tb__down">↓ ${n('down')}</span>`,
+    n('up') && `<span class="tb__up">↑ ${n('up')}</span>`,
+    n('sale') && `<span>% ${n('sale')} нових акцій</span>`,
+    n('new') && `<span>✦ ${n('new')} нових товарів</span>`,
+  ].filter(Boolean);
+  if (!parts.length && !n('gone')) return '';
+  return `<a class="today-banner" href="#/today"><b>Що змінилося ${fmtDate(parseDate(d.date), false)}</b>${parts.join('')}<span class="today-banner__go">Переглянути →</span></a>`;
+}
+
+function renderToday(tab) {
+  document.querySelector('.top').classList.add('is-product');
+  document.title = 'Що змінилося — PriceTrail';
+  scrollTo(0, 0);
+  const d = todayData();
+  const head = '<a class="back" href="#/">← Усі товари</a><h1 class="page-title">Що змінилося</h1>';
+  if (!d) {
+    app.innerHTML = `${head}<div class="empty"><b>🗓</b>Змін поки немає<br><span class="note">Стрічка з'явиться після наступного щоденного збору цін</span></div>`;
+    return;
+  }
+  const tabs = d.tabs.filter((t) => t[2].length);
+  const cur = tabs.find((t) => t[0] === tab) || tabs[0];
+  const stale = d.date !== state.meta.updated ? ` (останній збір у цьому місті — ${fmtDate(parseDate(state.meta.updated))})` : '';
+  let html = `${head}<p class="note today-sub">${state.city.name}: зміни за ${fmtDate(parseDate(d.date))} порівняно з попереднім днем${stale}.</p>`;
+  if (!cur) {
+    app.innerHTML = `${html}<div class="empty"><b>😌</b>Ціни не змінилися<br><span class="note">Порівняно з попереднім днем — жодних змін</span></div>`;
+    return;
+  }
+  html += `<div class="seg today-tabs" role="tablist">${tabs
+    .map(([k, label, list]) => `<a href="#/today/${k}" role="tab" aria-selected="${k === cur[0]}">${label} <small>${list.length}</small></a>`)
+    .join('')}</div>`;
+  const tile = (r) =>
+    r.gone
+      ? `<div class="card card--missing">
+          <div class="card__media"><img class="card__img" src="${esc(r.gone.img)}" alt="" loading="lazy"></div>
+          <div class="card__body"><div class="card__name">${esc(r.gone.name)}</div>
+            <div class="card__price"><span class="price">${fmtPrice(r.gone.price)} <small>₴/${esc(r.gone.unit)}</small></span></div>
+            <div class="note">Зник з каталогу</div></div>
+        </div>`
+      : card(r.p, r.c && r.c.to !== r.c.from ? r.c.from : undefined);
+  html += `<div class="grid">${cur[2].map(tile).join('')}</div>`;
+  app.innerHTML = html;
+}
+
 function renderList() {
   document.querySelector('.top').classList.remove('is-product');
   document.title = 'PriceTrail — історія цін';
@@ -591,7 +663,7 @@ function renderList() {
     const n = list.filter((p) => realSaving(p) > 0.005).length;
     count += ` · реальних акцій: ${n.toLocaleString('uk')}`;
   }
-  app.innerHTML = `${groupsRow}<p class="count">${count}</p>
+  app.innerHTML = `${filters.q ? '' : todayBanner()}${groupsRow}<p class="count">${count}</p>
     <div class="grid">${list.slice(0, state.shown).map((p) => card(p)).join('')}</div>
     ${list.length > state.shown ? '<button class="more" id="more">Показати ще</button>' : ''}`;
   initGroupsRow(scrollLeft);
@@ -981,7 +1053,8 @@ function route() {
   const onFavs = location.hash === '#/fav';
   if (onFavs) $('#favLink').setAttribute('aria-current', 'page');
   else $('#favLink').removeAttribute('aria-current');
-  const render = () => (m ? renderProduct(Number(m[1])) : onFavs ? renderFavs() : renderList());
+  const today = location.hash.match(/^#\/today(?:\/(\w+))?/);
+  const render = () => (m ? renderProduct(Number(m[1])) : onFavs ? renderFavs() : today ? renderToday(today[1]) : renderList());
   if (document.startViewTransition && !matchMedia('(prefers-reduced-motion: reduce)').matches) document.startViewTransition(render);
   else render();
 }

@@ -11,8 +11,19 @@ function Invoke-Step($name, [scriptblock]$cmd) {
     if ($LASTEXITCODE -ne 0) { throw "$name завершився з кодом $LASTEXITCODE" }
 }
 
+# Завдання будить комп'ютер зі сну: не даємо Windows приспати його знову, поки йде збір.
+Add-Type -Namespace Win32 -Name Power -MemberDefinition '[DllImport("kernel32.dll")] public static extern uint SetThreadExecutionState(uint esFlags);'
+$ES_CONTINUOUS = [uint32]'0x80000000'
+$ES_SYSTEM_REQUIRED = [uint32]1
+
 try {
+    [Win32.Power]::SetThreadExecutionState($ES_CONTINUOUS -bor $ES_SYSTEM_REQUIRED) | Out-Null
     Write-Host "Старт: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+    # Після пробудження мережа піднімається не одразу — чекаємо до 3 хвилин.
+    for ($i = 0; $i -lt 36; $i++) {
+        try { Invoke-WebRequest -Uri 'https://github.com' -Method Head -UseBasicParsing -TimeoutSec 5 | Out-Null; break }
+        catch { Start-Sleep -Seconds 5 }
+    }
     Invoke-Step 'git pull' { git pull --rebase --quiet }
     Invoke-Step 'npm ci' { npm ci --silent }
     Invoke-Step 'Збір цін' { npm run scrape }
@@ -29,5 +40,6 @@ try {
     Write-Host "ПОМИЛКА: $_"
     exit 1
 } finally {
+    [Win32.Power]::SetThreadExecutionState($ES_CONTINUOUS) | Out-Null
     Stop-Transcript | Out-Null
 }

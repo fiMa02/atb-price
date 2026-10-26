@@ -1,6 +1,8 @@
 ﻿# Щоденний збір цін з цього комп'ютера і публікація на GitHub.
 # Запускається Планувальником завдань Windows (див. scripts\install-task.ps1).
 $ErrorActionPreference = 'Stop'
+# Node пише в UTF-8; без цього PowerShell 5.1 читає його вивід як OEM-кодування й псує кирилицю.
+[Console]::OutputEncoding = [Text.Encoding]::UTF8
 $root = Split-Path $PSScriptRoot -Parent
 Set-Location $root
 Start-Transcript -Path (Join-Path $root 'daily.log') -Append | Out-Null

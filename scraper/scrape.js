@@ -29,11 +29,14 @@ const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,
 const PROBE_CATEGORY = '/catalog/285-bakaliya';
 // Скільки магазинів міста перевіряти під час вибору (рівномірно по списку).
 const MAX_PROBE_STORES = 12;
+// Скільки днів показувати зниклий товар як «немає в наявності», перш ніж прибрати з каталогу.
+const OUT_KEEP_DAYS = 30;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Дата за київським часом, щоб нічний запуск не «переїжджав» на інший день.
 const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Kyiv' }).format(new Date());
+const daysBetween = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 86400000);
 
 const args = process.argv.slice(2);
 const argValue = (name) => {
@@ -241,20 +244,39 @@ async function scrapeCity(city, store, categories, groupMap) {
   if (fullScrape) {
     for (const shard of shards) {
       for (const [id, hist] of Object.entries(shard)) {
-        if (!products.has(Number(id)) && hist.at(-1)[1] !== null) hist.push([today, null]);
+        if (products.has(Number(id)) || hist.at(-1)[1] === null) continue;
+        // Повторний збір того ж дня: товар, що зранку повернувся, а тепер знову зник, — просто відкочуємо запис.
+        if (hist.at(-1)[0] === today) hist.pop();
+        if (hist.length && hist.at(-1)[1] !== null) hist.push([today, null]);
+        else if (!hist.length) delete shard[id];
       }
     }
   }
   for (let i = 0; i < SHARDS; i++) {
     await fs.writeFile(path.join(historyDir, `${String(i).padStart(2, '0')}.json`), JSON.stringify(shards[i]));
   }
-  await writeChanges(dir, shards, products, today);
+  const oldList = await readJson(path.join(dir, 'products.json'), []);
+  await writeChanges(dir, shards, products, today, oldList);
 
-  const list = [...products.values()].sort((a, b) => a.name.localeCompare(b.name, 'uk'));
+  // Зниклі товари лишаємо в каталозі як «немає в наявності» (з останньою ціною) ще OUT_KEEP_DAYS днів.
+  const known = new Map(oldList.map((p) => [p.id, p]));
+  const out = [];
+  for (const shard of shards) {
+    for (const [key, hist] of Object.entries(shard)) {
+      const id = Number(key);
+      const [since, price] = hist.at(-1);
+      if (products.has(id) || price !== null || !known.has(id) || daysBetween(since, today) > OUT_KEEP_DAYS) continue;
+      const last = hist.findLast((h) => h[1] != null);
+      if (!last) continue;
+      const p = known.get(id);
+      out.push({ ...p, price: last[1], oldPrice: null, labels: [], changed: since, prev: null, regular: null, out: since });
+    }
+  }
+  const list = [...products.values(), ...out].sort((a, b) => a.name.localeCompare(b.name, 'uk'));
   await fs.writeFile(path.join(dir, 'products.json'), JSON.stringify(list));
-  const cityMeta = { updated: today, updatedAt: new Date().toISOString(), productCount: list.length, store };
+  const cityMeta = { updated: today, updatedAt: new Date().toISOString(), productCount: products.size, outCount: out.length, store };
   await fs.writeFile(path.join(dir, 'meta.json'), JSON.stringify(cityMeta, null, 2));
-  console.log(`[${city.name}] ${list.length} товарів, змін цін: ${changed}, ${Math.round((Date.now() - started) / 1000)} с`);
+  console.log(`[${city.name}] ${products.size} товарів (+${out.length} немає в наявності), змін цін: ${changed}, ${Math.round((Date.now() - started) / 1000)} с`);
   return cityMeta;
 }
 

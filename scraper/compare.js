@@ -19,6 +19,7 @@ export async function buildCompare(dataDir) {
       continue;
     }
     for (const p of products) {
+      if (p.out) continue; // немає в наявності — у порівнянні не показуємо
       const shard = shards[p.id % SHARDS];
       (shard[p.id] ||= {})[city.slug] = p.oldPrice ? [p.price, p.oldPrice] : p.price;
     }

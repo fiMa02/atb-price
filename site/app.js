@@ -150,7 +150,7 @@ async function loadData() {
   $('#updated').textContent = `${state.city.name}, магазин: ${meta.store.address} · ${meta.productCount.toLocaleString('uk')} товарів · оновлено ${fmtDate(parseDate(meta.updated))}`;
 
   const groups = new Map();
-  for (const p of products) groups.set(p.group || 'Інше', (groups.get(p.group || 'Інше') || 0) + 1);
+  for (const p of products) if (!p.out) groups.set(p.group || 'Інше', (groups.get(p.group || 'Інше') || 0) + 1);
   const order = (g) => (GROUPS.has(g) ? [...GROUPS.keys()].indexOf(g) : GROUPS.size);
   state.groups = [...groups].sort((a, b) => order(a[0]) - order(b[0]) || a[0].localeCompare(b[0], 'uk'));
   // Якщо вибраного розділу в цьому місті немає — скидаємо фільтр.
@@ -163,7 +163,7 @@ async function loadData() {
 function fillCategories() {
   const counts = new Map();
   for (const p of state.products) {
-    if (p.category && (!filters.group || (p.group || 'Інше') === filters.group)) counts.set(p.category, (counts.get(p.category) || 0) + 1);
+    if (p.category && !p.out && (!filters.group || (p.group || 'Інше') === filters.group)) counts.set(p.category, (counts.get(p.category) || 0) + 1);
   }
   const cats = [...counts].sort((a, b) => a[0].localeCompare(b[0], 'uk'));
   if (filters.cat && !counts.has(filters.cat)) filters.cat = '';
@@ -243,7 +243,7 @@ function toggleFav(p) {
 
 const favDrop = (p, f) => {
   const seen = f.seen?.[state.city.slug];
-  return seen != null && p.price < seen - 0.004 && (!f.target || p.price <= f.target);
+  return !p.out && seen != null && p.price < seen - 0.004 && (!f.target || p.price <= f.target);
 };
 const favHits = () =>
   Object.entries(favs)
@@ -264,6 +264,7 @@ function syncFavs() {
     const p = state.byId.get(+id);
     if (!p) continue;
     Object.assign(f, { name: p.name, img: p.img, unit: p.unit });
+    if (p.out) continue; // остання ціна зниклого товару — не нова ціна
     const seen = f.seen?.[state.city.slug];
     if (seen == null || p.price > seen) f.seen = { ...f.seen, [state.city.slug]: p.price };
   }
@@ -501,7 +502,8 @@ function filtered() {
     ...Object.fromEntries(Object.entries(PER_SORT).map(([k, u]) => [k, perSorter(u)])),
   };
   if (sorters[filters.sort]) list = [...list].sort(sorters[filters.sort]);
-  return list;
+  // Товари, яких немає в наявності, — наприкінці списку.
+  return [...list.filter((p) => !p.out), ...list.filter((p) => p.out)];
 }
 
 // ---------- Список ----------
@@ -510,10 +512,14 @@ function filtered() {
 function card(p, from) {
   const sale = p.oldPrice ? `<span class="badge">−${Math.round(discount(p) * 100)}%</span>` : '';
   let flags = '';
-  if (isInflated(p.oldPrice, p.regular)) {
+  if (p.out) {
+    flags = `<span class="tag tag--out" title="Остання ціна ${fmtPrice(p.price)} грн">Немає в наявності з ${fmtDate(parseDate(p.out), false)}</span>`;
+  } else if (isInflated(p.oldPrice, p.regular)) {
     flags += `<span class="tag tag--warn" title="Перед акцією було ${fmtPrice(p.regular)} грн — ціну до знижки завищено">⚠ до акції ${fmtPrice(p.regular)}</span>`;
   }
-  if (from != null && Math.abs(p.price - from) > 0.004) {
+  if (p.out) {
+    // без позначок зміни ціни
+  } else if (from != null && Math.abs(p.price - from) > 0.004) {
     const up = p.price > from;
     flags += `<span class="tag tag--${up ? 'up' : 'down'}" title="Попередня ціна ${fmtPrice(from)} грн">${up ? '↑' : '↓'} було ${fmtPrice(from)}</span>`;
   } else if (p.prev && p.prev !== p.price && !p.oldPrice) {
@@ -521,7 +527,7 @@ function card(p, from) {
     const change = Math.abs((p.price / p.prev - 1) * 100);
     flags += `<span class="tag tag--${up ? 'up' : 'down'}" title="Було ${fmtPrice(p.prev)}">${up ? '↑' : '↓'} ${change < 1 ? change.toFixed(1).replace('.', ',') : Math.round(change)}%</span>`;
   }
-  return `<a class="card" href="#/p/${p.id}">
+  return `<a class="card${p.out ? ' card--out' : ''}" href="#/p/${p.id}">
     <div class="card__media">
       <img class="card__img" src="${esc(p.img)}" alt="" loading="lazy" decoding="async">
       ${sale}
@@ -618,7 +624,9 @@ function todayData() {
     ['up', '↑ Подорожчало', rows.filter((r) => r.c.to > r.c.from).sort((a, b) => pctChange(b.c) - pctChange(a.c))],
     ['sale', '% Нові акції', rows.filter((r) => r.kind === 'sale').sort((a, b) => discount(b.p) - discount(a.p))],
     ['new', '✦ Нові товари', ch.added.map((id) => ({ p: state.byId.get(id) })).filter((r) => r.p)],
-    ['gone', '✕ Зникли', ch.removed.map((r) => ({ gone: r }))],
+    ['back', '↺ Знову в наявності', (ch.back || []).map((id) => ({ p: state.byId.get(id) })).filter((r) => r.p)],
+    // Зниклі лишаються в каталозі з позначкою out — тоді картку можна відкрити.
+    ['gone', '⊘ Немає в наявності', ch.removed.map((r) => ({ p: state.byId.get(r.id), gone: r }))],
   ];
   return { date: ch.date, tabs };
 }
@@ -632,6 +640,7 @@ function todayBanner() {
     n('up') && `<span class="tb__up">↑ ${n('up')}</span>`,
     n('sale') && `<span>% ${n('sale')} нових акцій</span>`,
     n('new') && `<span>✦ ${n('new')} нових товарів</span>`,
+    n('back') && `<span>↺ ${n('back')} знову в наявності</span>`,
   ].filter(Boolean);
   if (!parts.length && !n('gone')) return '';
   return `<a class="today-banner" href="#/today"><b>Що змінилося ${fmtDate(parseDate(d.date), false)}</b>${parts.join('')}<span class="today-banner__go">Переглянути →</span></a>`;
@@ -659,12 +668,12 @@ function renderToday(tab) {
     .map(([k, label, list]) => `<a href="#/today/${k}" role="tab" aria-selected="${k === cur[0]}">${label} <small>${list.length}</small></a>`)
     .join('')}</div>`;
   const tile = (r) =>
-    r.gone
+    r.gone && !r.p
       ? `<div class="card card--missing">
           <div class="card__media"><img class="card__img" src="${esc(r.gone.img)}" alt="" loading="lazy"></div>
           <div class="card__body"><div class="card__name">${esc(r.gone.name)}</div>
             <div class="card__price"><span class="price">${fmtPrice(r.gone.price)} <small>₴/${esc(r.gone.unit)}</small></span></div>
-            <div class="note">Зник з каталогу</div></div>
+            <div class="note">Немає в наявності</div></div>
         </div>`
       : card(r.p, r.c && r.c.to !== r.c.from ? r.c.from : undefined);
   html += `<div class="grid">${cur[2].map(tile).join('')}</div>`;
@@ -691,7 +700,9 @@ function renderList() {
     initGroupsRow(scrollLeft);
     return;
   }
-  let count = `Знайдено: ${list.length.toLocaleString('uk')}`;
+  const outN = list.filter((p) => p.out).length;
+  let count = `Знайдено: ${(list.length - outN).toLocaleString('uk')}`;
+  if (outN) count += ` · ще ${outN.toLocaleString('uk')} немає в наявності`;
   if (filters.sort === 'inflated') {
     const n = list.filter((p) => inflation(p) > 0).length;
     count += n ? ` · із завищеною «ціною до знижки»: ${n}` : ' · акцій із завищеною «ціною до знижки» поки не виявлено';
@@ -766,7 +777,8 @@ async function renderProduct(id) {
       <div>
         <h1>${esc(p.name)}</h1>
         <div class="chips">${[p.group, p.category, p.brand].filter(Boolean).map((c) => `<span class="chip">${esc(c)}</span>`).join('')}</div>
-        <div class="product__price">
+        ${p.out ? `<p class="out-box"><b>Немає в наявності</b> з ${fmtDate(parseDate(p.out))} у магазині АТБ (${esc(state.city.name)}). Нижче — остання відома ціна та її історія.</p>` : ''}
+        <div class="product__price${p.out ? ' is-out' : ''}">
           <span class="price ${p.oldPrice ? 'price--sale' : ''}">${fmtPrice(p.price)} <small>грн/${esc(p.unit)}</small></span>
           ${p.oldPrice ? `<span class="old">${fmtPrice(p.oldPrice)}</span>` : ''}
           ${labelsHtml(p)}

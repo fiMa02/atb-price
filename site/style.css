@@ -262,6 +262,16 @@ select {
   .card:hover .fav-btn, .card .fav-btn:focus-visible { opacity: 1; }
 }
 .card--missing { opacity: .6; }
+/* Немає в наявності: картка лишається клікабельною, але приглушена */
+.tag--out { color: var(--ink-2); background: var(--surface-2); }
+.card--out .card__img { filter: grayscale(1); opacity: .55; }
+.card--out .price, .card--out .old, .card--out .per { color: var(--muted); }
+.card--out .badge { display: none; }
+.out-box {
+  background: var(--surface-2); color: var(--ink); border-radius: var(--r-md);
+  padding: 10px 14px; margin: 0 0 12px; font-size: 14px; line-height: 1.45;
+}
+.product__price.is-out .price { color: var(--muted); }
 .card--missing .card__body { gap: 4px; }
 
 /* Ціна в інших містах: точка на шкалі від найдешевшого до найдорожчого */

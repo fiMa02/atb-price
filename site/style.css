@@ -230,6 +230,8 @@ select {
 .price small { font-weight: 500; color: var(--muted); font-size: 12px; letter-spacing: 0; }
 .price--sale { color: var(--sale); }
 .old { color: var(--muted); text-decoration: line-through; font-size: 13px; font-variant-numeric: tabular-nums; }
+.per { flex-basis: 100%; color: var(--muted); font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; margin-top: -4px; }
+.product__per { flex-basis: 100%; color: var(--ink-2); font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; }
 
 .badge {
   position: absolute; top: 8px; left: 8px;

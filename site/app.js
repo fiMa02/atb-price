@@ -22,6 +22,49 @@ const inflation = (p) => (isInflated(p.oldPrice, p.regular) ? p.oldPrice / p.reg
 // Без акції — 0; якщо «акційна» ціна не нижча за звичайну — від'ємна.
 const realSaving = (p) => (p.oldPrice ? 1 - p.price / Math.min(p.oldPrice, p.regular || p.oldPrice) : 0);
 
+// ---------- Ціна за кг / л / шт ----------
+// Кількість беремо з назви: «0,5 кг», «170мл», «4х115 г», «(76 ф/п х 2г)», «30 шт».
+const QTY_UNIT = { кг: ['кг', 1], г: ['кг', 1e-3], гр: ['кг', 1e-3], л: ['л', 1], мл: ['л', 1e-3] };
+const QTY_MULTI = /(\d+)\s*(?:ф\/п|пак\.?|шт\.?|капс\.?)?\s*[хx*]\s*(\d+(?:[.,]\d+)?)\s*(кг|гр|г|мл|л)(?![а-яіїєґa-z])/i;
+const QTY_ONE = /(?<![\d.,])(\d+(?:[.,]\d+)?)\s*(кг|гр|г|мл|л)(?![а-яіїєґa-z])/i;
+const QTY_PCS = /(?<![\d.,])(\d+)\s*шт(?![а-яіїєґa-z])/i;
+// Тут «150 мл», «20 л» — місткість речі, а не вміст: рахуємо лише за штуку.
+const PCS_ONLY = new Set(['Дім, одяг і дозвілля', 'Канцелярські товари']);
+// Тут штуки важливіші за вагу («Пакети 30 шт 35 л», «Підгузки 40 шт»).
+const PCS_FIRST = new Set(['Товари для дому', 'Товари для дітей']);
+const qtyNum = (s) => parseFloat(s.replace(',', '.'));
+
+function parseWeight(name) {
+  if (name.includes('№')) return null; // таблетки, вітаміни
+  let m = name.match(QTY_MULTI);
+  if (m) {
+    const [unit, k] = QTY_UNIT[m[3].toLowerCase()];
+    return { unit, qty: qtyNum(m[1]) * qtyNum(m[2]) * k };
+  }
+  m = name.match(QTY_ONE);
+  if (m) {
+    const [unit, k] = QTY_UNIT[m[2].toLowerCase()];
+    return { unit, qty: qtyNum(m[1]) * k };
+  }
+  return null;
+}
+function parsePieces(name) {
+  const m = name.match(QTY_PCS);
+  return m && +m[1] > 1 ? { unit: 'шт', qty: +m[1] } : null;
+}
+
+// { price, unit } — ціна за 1 кг / л / шт; null, якщо кількість невідома або це й так ціна за одиницю.
+function perUnit(p) {
+  if (p.unit === 'кг') return null; // вагові товари вже мають ціну за кг
+  const g = p.group || '';
+  // Набори — лише за штуку; у «штучних» розділах навіть «1 шт» означає, що вага там — не вміст.
+  const pcsOnly = PCS_ONLY.has(g) || /^набір/i.test(p.name) || (PCS_FIRST.has(g) && QTY_PCS.test(p.name));
+  const q = pcsOnly ? parsePieces(p.name) : parseWeight(p.name) || parsePieces(p.name);
+  if (!q || !(q.qty > 0) || q.qty === 1) return null;
+  return { price: p.price / q.qty, unit: q.unit };
+}
+const perHtml = (p, cls = 'per') => (p._per ? `<span class="${cls}">${fmtPrice(p._per.price)} ₴/${p._per.unit}</span>` : '');
+
 // ---------- Дані ----------
 
 const store = {
@@ -66,6 +109,7 @@ async function loadData() {
   state.shards = new Map();
   for (const p of products) {
     p._q = norm(`${p.name} ${p.brand ?? ''}`);
+    p._per = perUnit(p);
     state.byId.set(p.id, p);
   }
   state.products = products;
@@ -392,6 +436,9 @@ function bindFilters() {
   for (const id of ['#cat', '#sort', '#sale']) $(id).addEventListener('change', update);
 }
 
+const perRank = (p) => (p.unit === 'кг' || (p._per && p._per.unit !== 'шт') ? 0 : p._per ? 1 : 2);
+const perValue = (p) => (p._per ? p._per.price : p.price);
+
 function filtered() {
   const words = norm(filters.q).split(/\s+/).filter(Boolean);
   let list = state.products.filter(
@@ -410,6 +457,8 @@ function filtered() {
     // Акції з найбільшою реальною знижкою; далі товари без акції, наприкінці — фіктивні акції.
     real: (a, b) => realSaving(b) - realSaving(a),
     changed: (a, b) => (b.changed || '').localeCompare(a.changed || ''),
+    // Спершу за кг/л (вагові товари — за їхньою ціною), потім за штуку, решта — за ціною.
+    'per-asc': (a, b) => perRank(a) - perRank(b) || perValue(a) - perValue(b),
   };
   if (sorters[filters.sort]) list = [...list].sort(sorters[filters.sort]);
   return list;
@@ -442,6 +491,7 @@ function card(p, from) {
       <div class="card__price">
         <span class="price ${p.oldPrice ? 'price--sale' : ''}">${fmtPrice(p.price)} <small>₴/${esc(p.unit)}</small></span>
         ${p.oldPrice ? `<span class="old">${fmtPrice(p.oldPrice)}</span>` : ''}
+        ${perHtml(p)}
       </div>
       <div class="card__flags">${flags}</div>
     </div>
@@ -606,6 +656,7 @@ async function renderProduct(id) {
           <span class="price ${p.oldPrice ? 'price--sale' : ''}">${fmtPrice(p.price)} <small>грн/${esc(p.unit)}</small></span>
           ${p.oldPrice ? `<span class="old">${fmtPrice(p.oldPrice)}</span>` : ''}
           ${labelsHtml(p)}
+          ${p._per ? `<span class="product__per">${fmtPrice(p._per.price)} грн за 1 ${p._per.unit}</span>` : ''}
         </div>
         <div id="warn"></div>
         <div class="product__actions"><span class="fav-actions">${favActions(p)}</span><a class="btn btn--primary" href="https://www.atbmarket.com${esc(p.url)}" target="_blank" rel="noopener">Відкрити на atbmarket.com ↗</a></div>

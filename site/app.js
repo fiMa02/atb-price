@@ -23,16 +23,20 @@ const inflation = (p) => (isInflated(p.oldPrice, p.regular) ? p.oldPrice / p.reg
 const realSaving = (p) => (p.oldPrice ? 1 - p.price / Math.min(p.oldPrice, p.regular || p.oldPrice) : 0);
 
 // ---------- Ціна за кг / л / шт ----------
-// Кількість беремо з назви: «0,5 кг», «170мл», «4х115 г», «(76 ф/п х 2г)», «30 шт».
+// Кількість беремо з назви: «0,5 кг», «170мл», «4х115 г», «(76 ф/п х 2г)», «200+100 мл», «30 шт».
 const QTY_UNIT = { кг: ['кг', 1], г: ['кг', 1e-3], гр: ['кг', 1e-3], л: ['л', 1], мл: ['л', 1e-3] };
-const QTY_MULTI = /(\d+)\s*(?:ф\/п|пак\.?|шт\.?|капс\.?)?\s*[хx*]\s*(\d+(?:[.,]\d+)?)\s*(кг|гр|г|мл|л)(?![а-яіїєґa-z])/i;
+const QTY_MULTI = /(\d+|\(\d+\+\d+\))\s*(?:ф\/п|пак\.?|шт\.?|капс\.?)?\s*[хx*]\s*(\d+(?:[.,]\d+)?)\s*(кг|гр|г|мл|л)(?![а-яіїєґa-z])/i;
+// «200+100 мл», «140 г+15 г», «350г + 100г» — акційна упаковка з бонусом.
+const QTY_SUM = /(?<![\d.,])(\d+(?:[.,]\d+)?)\s*(кг|гр|г|мл|л)?\s*\+\s*(\d+(?:[.,]\d+)?)\s*(кг|гр|г|мл|л)(?![а-яіїєґa-z])/i;
 const QTY_ONE = /(?<![\d.,])(\d+(?:[.,]\d+)?)\s*(кг|гр|г|мл|л)(?![а-яіїєґa-z])/i;
 const QTY_PCS = /(?<![\d.,])(\d+)\s*шт(?![а-яіїєґa-z])/i;
+const QTY_PCS_SUM = /(?<![\d.,])(\d+)\s*\+\s*(\d+)\s*шт(?![а-яіїєґa-z])/i;
 // Тут «150 мл», «20 л» — місткість речі, а не вміст: рахуємо лише за штуку.
 const PCS_ONLY = new Set(['Дім, одяг і дозвілля', 'Канцелярські товари']);
 // Тут штуки важливіші за вагу («Пакети 30 шт 35 л», «Підгузки 40 шт»).
 const PCS_FIRST = new Set(['Товари для дому', 'Товари для дітей']);
-const qtyNum = (s) => parseFloat(s.replace(',', '.'));
+// «12», «2,5» або «(20+2)»
+const qtyNum = (s) => (s[0] === '(' ? s.slice(1, -1).split('+').reduce((a, b) => a + +b, 0) : parseFloat(s.replace(',', '.')));
 
 function parseWeight(name) {
   if (name.includes('№')) return null; // таблетки, вітаміни
@@ -41,14 +45,23 @@ function parseWeight(name) {
     const [unit, k] = QTY_UNIT[m[3].toLowerCase()];
     return { unit, qty: qtyNum(m[1]) * qtyNum(m[2]) * k };
   }
-  m = name.match(QTY_ONE);
-  if (m) {
-    const [unit, k] = QTY_UNIT[m[2].toLowerCase()];
-    return { unit, qty: qtyNum(m[1]) * k };
+  const one = name.match(QTY_ONE);
+  m = name.match(QTY_SUM);
+  // Сума — лише якщо стоїть не пізніше за звичайну вагу («Хліб 350 г … 1г+2г» — це 350 г).
+  if (m && m.index <= one.index) {
+    const [unit, k2] = QTY_UNIT[m[4].toLowerCase()];
+    const k1 = m[2] ? QTY_UNIT[m[2].toLowerCase()] : [unit, k2];
+    if (k1[0] === unit) return { unit, qty: qtyNum(m[1]) * k1[1] + qtyNum(m[3]) * k2 };
+  }
+  if (one) {
+    const [unit, k] = QTY_UNIT[one[2].toLowerCase()];
+    return { unit, qty: qtyNum(one[1]) * k };
   }
   return null;
 }
 function parsePieces(name) {
+  const s = name.match(QTY_PCS_SUM);
+  if (s) return { unit: 'шт', qty: +s[1] + +s[2] };
   const m = name.match(QTY_PCS);
   return m && +m[1] > 1 ? { unit: 'шт', qty: +m[1] } : null;
 }
@@ -58,7 +71,7 @@ function perUnit(p) {
   if (p.unit === 'кг') return null; // вагові товари вже мають ціну за кг
   const g = p.group || '';
   // Набори — лише за штуку; у «штучних» розділах навіть «1 шт» означає, що вага там — не вміст.
-  const pcsOnly = PCS_ONLY.has(g) || /^набір/i.test(p.name) || (PCS_FIRST.has(g) && QTY_PCS.test(p.name));
+  const pcsOnly = PCS_ONLY.has(g) || /^наб[іi]р/i.test(p.name) || (PCS_FIRST.has(g) && QTY_PCS.test(p.name));
   const q = pcsOnly ? parsePieces(p.name) : parseWeight(p.name) || parsePieces(p.name);
   if (!q || !(q.qty > 0) || q.qty === 1) return null;
   return { price: p.price / q.qty, unit: q.unit };

@@ -1,6 +1,6 @@
 {
-  "name": "Ціни АТБ — історія цін",
-  "short_name": "Ціни АТБ",
+  "name": "PriceTrail — історія цін",
+  "short_name": "PriceTrail",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

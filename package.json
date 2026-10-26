@@ -1,7 +1,7 @@
 {
-  "name": "atb-price",
+  "name": "pricetrail",
   "version": "1.0.0",
-  "description": "Неофіційний трекер цін АТБ з історією цін",
+  "description": "PriceTrail — трекер цін супермаркетів з історією цін",
   "scripts": {
     "scrape": "node scraper/scrape.js",
     "serve": "npx --yes serve site"

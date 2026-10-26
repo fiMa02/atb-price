@@ -295,7 +295,7 @@ function initGroupsRow(scrollLeft) {
 
 function renderList() {
   document.querySelector('.top').classList.remove('is-product');
-  document.title = 'Ціни АТБ — історія цін';
+  document.title = 'PriceTrail — історія цін';
   const list = filtered();
   // Ряд розділів перемальовується разом зі списком — зберігаємо його горизонтальну прокрутку.
   const scrollLeft = $('.groups')?.scrollLeft;
@@ -372,7 +372,7 @@ async function renderProduct(id) {
     app.innerHTML = '<a class="back" href="#/">← Усі товари</a><p class="status">Товар не знайдено — можливо, його вже немає в каталозі.</p>';
     return;
   }
-  document.title = `${p.name} — Ціни АТБ`;
+  document.title = `${p.name} — PriceTrail`;
   app.innerHTML = `<a class="back" href="#/">← Усі товари</a>
     <div class="product">
       <div class="product__media"><img class="product__img" src="${esc(p.img)}" alt=""></div>

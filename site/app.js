@@ -592,7 +592,7 @@ function renderList() {
     count += ` · реальних акцій: ${n.toLocaleString('uk')}`;
   }
   app.innerHTML = `${groupsRow}<p class="count">${count}</p>
-    <div class="grid">${list.slice(0, state.shown).map(card).join('')}</div>
+    <div class="grid">${list.slice(0, state.shown).map((p) => card(p)).join('')}</div>
     ${list.length > state.shown ? '<button class="more" id="more">Показати ще</button>' : ''}`;
   initGroupsRow(scrollLeft);
   const more = $('#more');

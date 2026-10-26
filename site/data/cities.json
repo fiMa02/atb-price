@@ -3,182 +3,182 @@
     "slug": "kyiv",
     "name": "Київ",
     "address": "просп. Корольова  Академіка, 3",
-    "productCount": 4197,
-    "updated": "2026-10-26"
+    "productCount": 4184,
+    "updated": "2026-10-27"
   },
   {
     "slug": "dnipro",
     "name": "Дніпро",
     "address": "майдан Озерний, буд. 25",
-    "productCount": 4476,
-    "updated": "2026-10-26"
+    "productCount": 4468,
+    "updated": "2026-10-27"
   },
   {
     "slug": "kharkiv",
     "name": "Харків",
     "address": "просп. Аерокосмічний, буд. 181",
-    "productCount": 4110,
-    "updated": "2026-10-26"
+    "productCount": 4137,
+    "updated": "2026-10-27"
   },
   {
     "slug": "odesa",
     "name": "Одеса",
     "address": "дор. Фонтанська, буд. 121",
-    "productCount": 3750,
-    "updated": "2026-10-26"
+    "productCount": 3728,
+    "updated": "2026-10-27"
   },
   {
     "slug": "lviv",
     "name": "Львів",
     "address": "вул. Липинського В., 36",
-    "productCount": 4204,
-    "updated": "2026-10-26"
+    "productCount": 4205,
+    "updated": "2026-10-27"
   },
   {
     "slug": "zaporizhzhia",
     "name": "Запоріжжя",
     "address": "вул. Космічна, 126 б",
-    "productCount": 4372,
-    "updated": "2026-10-26"
+    "productCount": 4358,
+    "updated": "2026-10-27"
   },
   {
     "slug": "kryvyi-rih",
     "name": "Кривий Ріг",
     "address": "вул. Єгора Біркуна, буд. 9",
-    "productCount": 4296,
-    "updated": "2026-10-26"
+    "productCount": 4265,
+    "updated": "2026-10-27"
   },
   {
     "slug": "mykolaiv",
     "name": "Миколаїв",
     "address": "вул. Привільна, буд. 71 А/1",
-    "productCount": 3725,
-    "updated": "2026-10-26"
+    "productCount": 3712,
+    "updated": "2026-10-27"
   },
   {
     "slug": "vinnytsia",
     "name": "Вінниця",
     "address": "вул. Липовецька, 6 а блок 4, блок 5",
-    "productCount": 3957,
-    "updated": "2026-10-26"
+    "productCount": 4077,
+    "updated": "2026-10-27"
   },
   {
     "slug": "poltava",
     "name": "Полтава",
     "address": "вул. Героїв АТО, 81",
-    "productCount": 3671,
-    "updated": "2026-10-26"
+    "productCount": 3665,
+    "updated": "2026-10-27"
   },
   {
     "slug": "chernihiv",
     "name": "Чернігів",
     "address": "вул. Всіхсвятська, 5",
-    "productCount": 4067,
-    "updated": "2026-10-26"
+    "productCount": 4072,
+    "updated": "2026-10-27"
   },
   {
     "slug": "cherkasy",
     "name": "Черкаси",
     "address": "вул. Грушевського Михайла, буд. 73/2",
-    "productCount": 4252,
-    "updated": "2026-10-26"
+    "productCount": 4232,
+    "updated": "2026-10-27"
   },
   {
     "slug": "khmelnytskyi",
     "name": "Хмельницький",
     "address": "вул. Вінницьке шосе, буд. 22-А",
-    "productCount": 3835,
-    "updated": "2026-10-26"
+    "productCount": 3960,
+    "updated": "2026-10-27"
   },
   {
     "slug": "zhytomyr",
     "name": "Житомир",
     "address": "вул. Домбровського, 3",
-    "productCount": 4004,
-    "updated": "2026-10-26"
+    "productCount": 4125,
+    "updated": "2026-10-27"
   },
   {
     "slug": "sumy",
     "name": "Суми",
     "address": "вул. Героїв Крут, 76/3, прим. 1",
-    "productCount": 4134,
-    "updated": "2026-10-26"
+    "productCount": 4165,
+    "updated": "2026-10-27"
   },
   {
     "slug": "rivne",
     "name": "Рівне",
     "address": "вул. Литовська, буд. 93-приміщення 100, 101",
-    "productCount": 4329,
-    "updated": "2026-10-26"
+    "productCount": 4348,
+    "updated": "2026-10-27"
   },
   {
     "slug": "ivano-frankivsk",
     "name": "Івано-Франківськ",
     "address": "вул. Максимовича, буд. 15",
-    "productCount": 4315,
-    "updated": "2026-10-26"
+    "productCount": 4318,
+    "updated": "2026-10-27"
   },
   {
     "slug": "kropyvnytskyi",
     "name": "Кропивницький",
     "address": "вул. Є.Маланюка, 1",
-    "productCount": 3958,
-    "updated": "2026-10-26"
+    "productCount": 3972,
+    "updated": "2026-10-27"
   },
   {
     "slug": "ternopil",
     "name": "Тернопіль",
     "address": "вул. Леся Курбаса, 2 а",
-    "productCount": 3953,
-    "updated": "2026-10-26"
+    "productCount": 3948,
+    "updated": "2026-10-27"
   },
   {
     "slug": "lutsk",
     "name": "Луцьк",
     "address": "вул. Карпенка-Карого, буд. 17",
-    "productCount": 4246,
-    "updated": "2026-10-26"
+    "productCount": 4264,
+    "updated": "2026-10-27"
   },
   {
     "slug": "uzhhorod",
     "name": "Ужгород",
     "address": "вул. Українська, 58",
-    "productCount": 4106,
-    "updated": "2026-10-26"
+    "productCount": 4093,
+    "updated": "2026-10-27"
   },
   {
     "slug": "chernivtsi",
     "name": "Чернівці",
     "address": "вул. Калинівська, 13-в",
-    "productCount": 4348,
-    "updated": "2026-10-26"
+    "productCount": 4308,
+    "updated": "2026-10-27"
   },
   {
     "slug": "kherson",
     "name": "Херсон",
     "address": "вул. Вишнева, 157/71",
-    "productCount": 2875,
-    "updated": "2026-10-26"
+    "productCount": 2839,
+    "updated": "2026-10-27"
   },
   {
     "slug": "bila-tserkva",
     "name": "Біла Церква",
     "address": "вул. Павліченко, 27",
-    "productCount": 3904,
-    "updated": "2026-10-26"
+    "productCount": 3895,
+    "updated": "2026-10-27"
   },
   {
     "slug": "kremenchuk",
     "name": "Кременчук",
     "address": "вул. Старшого лейтенанта Кагала, буд. 63 а",
-    "productCount": 3986,
-    "updated": "2026-10-26"
+    "productCount": 3970,
+    "updated": "2026-10-27"
   },
   {
     "slug": "kamianske",
     "name": "Кам'янське",
     "address": "просп. Василя Стуса, 2 б, прим. 161",
-    "productCount": 4420,
-    "updated": "2026-10-26"
+    "productCount": 3802,
+    "updated": "2026-10-27"
   }
 ]

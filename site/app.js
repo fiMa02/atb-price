@@ -408,6 +408,7 @@ for (const [k, v] of new URLSearchParams(location.search)) {
   if (k === 'sale') filters.sale = v === '1';
   else if (k in filters) filters[k] = v;
 }
+if (filters.sort === 'per-asc') filters.sort = 'per-kg'; // колишнє «Дешевші за кг/л»
 
 function applyFilters() {
   try {
@@ -469,8 +470,15 @@ function bindFilters() {
   for (const id of ['#cat', '#sort', '#sale']) $(id).addEventListener('change', update);
 }
 
-const perRank = (p) => (p.unit === 'кг' || (p._per && p._per.unit !== 'шт') ? 0 : p._per ? 1 : 2);
-const perValue = (p) => (p._per ? p._per.price : p.price);
+// Ціна за 1 кг / л / шт (вагові товари — за їхньою ціною); null, якщо для цієї одиниці невідома.
+const PER_SORT = { 'per-kg': 'кг', 'per-l': 'л', 'per-pcs': 'шт' };
+const perIn = (p, unit) => (p.unit === 'кг' ? (unit === 'кг' ? p.price : null) : p._per?.unit === unit ? p._per.price : null);
+// Спершу товари з ціною за потрібну одиницю (від найдешевших), далі решта — за звичайною ціною.
+const perSorter = (unit) => (a, b) => {
+  const x = perIn(a, unit);
+  const y = perIn(b, unit);
+  return (x == null) - (y == null) || (x ?? a.price) - (y ?? b.price);
+};
 
 function filtered() {
   const words = norm(filters.q).split(/\s+/).filter(Boolean);
@@ -490,8 +498,7 @@ function filtered() {
     // Акції з найбільшою реальною знижкою; далі товари без акції, наприкінці — фіктивні акції.
     real: (a, b) => realSaving(b) - realSaving(a),
     changed: (a, b) => (b.changed || '').localeCompare(a.changed || ''),
-    // Спершу за кг/л (вагові товари — за їхньою ціною), потім за штуку, решта — за ціною.
-    'per-asc': (a, b) => perRank(a) - perRank(b) || perValue(a) - perValue(b),
+    ...Object.fromEntries(Object.entries(PER_SORT).map(([k, u]) => [k, perSorter(u)])),
   };
   if (sorters[filters.sort]) list = [...list].sort(sorters[filters.sort]);
   return list;
@@ -692,6 +699,11 @@ function renderList() {
   if (filters.sort === 'real') {
     const n = list.filter((p) => realSaving(p) > 0.005).length;
     count += ` · реальних акцій: ${n.toLocaleString('uk')}`;
+  }
+  const perUnitSort = PER_SORT[filters.sort];
+  if (perUnitSort) {
+    const n = list.filter((p) => perIn(p, perUnitSort) != null).length;
+    count += ` · з ціною за 1 ${perUnitSort}: ${n.toLocaleString('uk')}`;
   }
   app.innerHTML = `${filters.q ? '' : todayBanner()}${groupsRow}<p class="count">${count}</p>
     <div class="grid">${list.slice(0, state.shown).map((p) => card(p)).join('')}</div>

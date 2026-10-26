@@ -1,5 +1,5 @@
 // Оболонка сайту — з кешу; дані — спершу з мережі (щоб ціни були свіжими), з кешу лише офлайн.
-const CACHE = 'atb-price-v1';
+const CACHE = 'atb-price-v2';
 const SHELL = ['./', 'index.html', 'style.css', 'app.js', 'icon.svg', 'manifest.webmanifest'];
 
 self.addEventListener('install', (e) => {

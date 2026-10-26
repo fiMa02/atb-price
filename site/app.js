@@ -4,7 +4,7 @@ const DAY = 86400000;
 
 const $ = (sel) => document.querySelector(sel);
 const app = $('#app');
-const state = { products: [], byId: new Map(), meta: null, shown: PAGE, shards: new Map() };
+const state = { cities: [], city: null, products: [], byId: new Map(), meta: null, shown: PAGE, shards: new Map() };
 
 const fmtPrice = (v) => v.toFixed(2).replace('.', ',');
 const parseDate = (s) => Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10));
@@ -17,42 +17,138 @@ const fmtDate = (t, withYear = true) => {
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const norm = (s) => s.toLowerCase().replace(/ё/g, 'е').replace(/[’'`ʼ]/g, '');
 const discount = (p) => (p.oldPrice ? 1 - p.price / p.oldPrice : 0);
+const inflation = (p) => (isInflated(p.oldPrice, p.regular) ? p.oldPrice / p.regular - 1 : 0);
 
 // ---------- Дані ----------
 
+const store = {
+  get: (k) => {
+    try {
+      return localStorage.getItem(k);
+    } catch {
+      return null;
+    }
+  },
+  set: (k, v) => {
+    try {
+      localStorage.setItem(k, v);
+    } catch {}
+  },
+};
+const cityDir = () => `data/cities/${state.city.slug}`;
+
+async function loadCities() {
+  state.cities = await fetch('data/cities.json').then((r) => r.json());
+  const saved = store.get('city');
+  state.city = state.cities.find((c) => c.slug === saved) || state.cities.find((c) => c.slug === 'kyiv') || state.cities[0];
+  $('#city').innerHTML = state.cities
+    .map((c) => `<option value="${c.slug}"${c === state.city ? ' selected' : ''}>${esc(c.name)}</option>`)
+    .join('');
+  $('#city').addEventListener('change', async () => {
+    state.city = state.cities.find((c) => c.slug === $('#city').value);
+    store.set('city', state.city.slug);
+    app.innerHTML = skeleton();
+    await loadData();
+    state.shown = PAGE;
+    route();
+  });
+}
+
 async function loadData() {
   const [products, meta] = await Promise.all([
-    fetch('data/products.json').then((r) => r.json()),
-    fetch('data/meta.json').then((r) => r.json()),
+    fetch(`${cityDir()}/products.json`).then((r) => r.json()),
+    fetch(`${cityDir()}/meta.json`).then((r) => r.json()),
   ]);
+  state.byId = new Map();
+  state.shards = new Map();
   for (const p of products) {
     p._q = norm(`${p.name} ${p.brand ?? ''}`);
     state.byId.set(p.id, p);
   }
   state.products = products;
   state.meta = meta;
-  $('#updated').textContent = `${meta.productCount.toLocaleString('uk')} товарів · оновлено ${fmtDate(parseDate(meta.updated))}`;
+  $('#updated').textContent = `${state.city.name}, магазин: ${meta.store.address} · ${meta.productCount.toLocaleString('uk')} товарів · оновлено ${fmtDate(parseDate(meta.updated))}`;
 
-  const counts = new Map();
-  for (const p of products) if (p.category) counts.set(p.category, (counts.get(p.category) || 0) + 1);
-  const cats = [...counts].sort((a, b) => a[0].localeCompare(b[0], 'uk'));
-  $('#cat').insertAdjacentHTML('beforeend', cats.map(([c, n]) => `<option value="${esc(c)}">${esc(c)} (${n})</option>`).join(''));
+  const groups = new Map();
+  for (const p of products) groups.set(p.group || 'Інше', (groups.get(p.group || 'Інше') || 0) + 1);
+  const order = (g) => (GROUPS.has(g) ? [...GROUPS.keys()].indexOf(g) : GROUPS.size);
+  state.groups = [...groups].sort((a, b) => order(a[0]) - order(b[0]) || a[0].localeCompare(b[0], 'uk'));
+  // Якщо вибраного розділу в цьому місті немає — скидаємо фільтр.
+  if (filters.group && !groups.has(filters.group)) filters.group = '';
+  fillCategories();
 }
+
+// Підкатегорії лише вибраного розділу.
+function fillCategories() {
+  const counts = new Map();
+  for (const p of state.products) {
+    if (p.category && (!filters.group || (p.group || 'Інше') === filters.group)) counts.set(p.category, (counts.get(p.category) || 0) + 1);
+  }
+  const cats = [...counts].sort((a, b) => a[0].localeCompare(b[0], 'uk'));
+  if (filters.cat && !counts.has(filters.cat)) filters.cat = '';
+  $('#cat').innerHTML =
+    `<option value="">${filters.group ? 'Усі підкатегорії' : 'Усі категорії'}</option>` +
+    cats.map(([c, n]) => `<option value="${esc(c)}">${esc(c)} (${n})</option>`).join('');
+  $('#cat').value = filters.cat;
+}
+
+// Розділи в порядку показу та їхні іконки.
+const GROUPS = new Map([
+  ['Овочі та фрукти', '🥦'],
+  ['Молочні продукти та яйця', '🥛'],
+  ["М'ясо", '🥩'],
+  ["Ковбаса і м'ясні делікатеси", '🥓'],
+  ['Риба і морепродукти', '🐟'],
+  ['Хлібобулочні вироби', '🍞'],
+  ['Бакалія', '🌾'],
+  ['Кондитерські вироби', '🍫'],
+  ['Заморожені продукти', '🧊'],
+  ['Кулінарія', '🍲'],
+  ['Японська кухня', '🍣'],
+  ['Чипси, снеки', '🍿'],
+  ['Кава, чай', '☕'],
+  ['Напої безалкогольні', '🥤'],
+  ['Алкоголь', '🍷'],
+  ['Дитяче харчування', '🍼'],
+  ['Товари для дітей', '🧸'],
+  ['Гігієна і косметика', '🧼'],
+  ['Побутова хімія та непродовольчі товари', '🧴'],
+  ['Товари для дому', '🏠'],
+  ['Дім, одяг і дозвілля', '🛋️'],
+  ['Товари для тварин', '🐾'],
+  ['Канцелярські товари', '✏️'],
+  ['Тютюнові вироби', '🚬'],
+  ['Сертифікати та платіжні картки', '💳'],
+]);
 
 async function loadHistory(id) {
   const shard = id % SHARDS;
   if (!state.shards.has(shard)) {
-    state.shards.set(shard, fetch(`data/history/${String(shard).padStart(2, '0')}.json`).then((r) => r.json()));
+    state.shards.set(shard, fetch(`${cityDir()}/history/${String(shard).padStart(2, '0')}.json`).then((r) => r.json()));
   }
   return (await state.shards.get(shard))[id] || [];
 }
 
 // ---------- Фільтри ----------
 
-const filters = { q: '', cat: '', sort: 'name', sale: false };
+const filters = { q: '', group: '', cat: '', sort: 'name', sale: false };
 try {
   Object.assign(filters, JSON.parse(sessionStorage.getItem('filters') || '{}'));
 } catch {}
+// Параметри з адреси (?sort=inflated&q=молоко&sale=1) мають пріоритет — щоб можна було ділитися посиланнями.
+for (const [k, v] of new URLSearchParams(location.search)) {
+  if (k === 'sale') filters.sale = v === '1';
+  else if (k in filters) filters[k] = v;
+}
+
+function applyFilters() {
+  try {
+    sessionStorage.setItem('filters', JSON.stringify(filters));
+  } catch {}
+  state.shown = PAGE;
+  if (location.hash.startsWith('#/p/')) location.hash = '#/';
+  else renderList();
+}
 
 function bindFilters() {
   $('#q').value = filters.q;
@@ -65,13 +161,17 @@ function bindFilters() {
     filters.cat = $('#cat').value;
     filters.sort = $('#sort').value;
     filters.sale = $('#sale').checked;
-    try {
-      sessionStorage.setItem('filters', JSON.stringify(filters));
-    } catch {}
-    state.shown = PAGE;
-    if (location.hash.startsWith('#/p/')) location.hash = '#/';
-    else renderList();
+    applyFilters();
   };
+  // Клік по чипу розділу (ряд чипів перемальовується разом зі списком, тому делегуємо).
+  app.addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-group]');
+    if (!chip) return;
+    filters.group = chip.dataset.group;
+    filters.cat = '';
+    fillCategories();
+    applyFilters();
+  });
   $('#q').addEventListener('input', () => {
     clearTimeout(t);
     t = setTimeout(update, 150);
@@ -83,6 +183,7 @@ function filtered() {
   const words = norm(filters.q).split(/\s+/).filter(Boolean);
   let list = state.products.filter(
     (p) =>
+      (!filters.group || (p.group || 'Інше') === filters.group) &&
       (!filters.cat || p.category === filters.cat) &&
       (!filters.sale || p.oldPrice) &&
       words.every((w) => p._q.includes(w)),
@@ -91,6 +192,8 @@ function filtered() {
     'price-asc': (a, b) => a.price - b.price,
     'price-desc': (a, b) => b.price - a.price,
     discount: (a, b) => discount(b) - discount(a),
+    // На скільки «ціна до знижки» вища за звичайну ціну перед акцією; незавищені — після, за назвою.
+    inflated: (a, b) => inflation(b) - inflation(a),
     changed: (a, b) => (b.changed || '').localeCompare(a.changed || ''),
   };
   if (sorters[filters.sort]) list = [...list].sort(sorters[filters.sort]);
@@ -101,36 +204,124 @@ function filtered() {
 
 function card(p) {
   const sale = p.oldPrice ? `<span class="badge">−${Math.round(discount(p) * 100)}%</span>` : '';
-  let trend = '';
+  let flags = '';
+  if (isInflated(p.oldPrice, p.regular)) {
+    flags += `<span class="tag tag--warn" title="Перед акцією було ${fmtPrice(p.regular)} грн — ціну до знижки завищено">⚠ до акції ${fmtPrice(p.regular)}</span>`;
+  }
   if (p.prev && p.prev !== p.price && !p.oldPrice) {
     const up = p.price > p.prev;
     const change = Math.abs((p.price / p.prev - 1) * 100);
-    trend = `<span class="trend trend--${up ? 'up' : 'down'}" title="Було ${fmtPrice(p.prev)}">${up ? '▲' : '▼'} ${change < 1 ? change.toFixed(1).replace('.', ',') : Math.round(change)}%</span>`;
+    flags += `<span class="tag tag--${up ? 'up' : 'down'}" title="Було ${fmtPrice(p.prev)}">${up ? '↑' : '↓'} ${change < 1 ? change.toFixed(1).replace('.', ',') : Math.round(change)}%</span>`;
   }
   return `<a class="card" href="#/p/${p.id}">
-    ${sale}
-    <img class="card__img" src="${esc(p.img)}" alt="" loading="lazy" decoding="async">
-    <div class="card__name">${esc(p.name)}</div>
-    <div class="card__bottom">
-      <span class="price ${p.oldPrice ? 'price--sale' : ''}">${fmtPrice(p.price)} <small>грн/${esc(p.unit)}</small></span>
-      ${p.oldPrice ? `<span class="old">${fmtPrice(p.oldPrice)}</span>` : ''}
-      ${isInflated(p.oldPrice, p.regular) ? `<span class="warn" title="Перед акцією було ${fmtPrice(p.regular)} грн — ціну до знижки завищено">⚠ до акції ${fmtPrice(p.regular)}</span>` : ''}
-      ${trend}
+    <div class="card__media">
+      <img class="card__img" src="${esc(p.img)}" alt="" loading="lazy" decoding="async">
+      ${sale}
+    </div>
+    <div class="card__body">
+      <div class="card__name">${esc(p.name)}</div>
+      <div class="card__price">
+        <span class="price ${p.oldPrice ? 'price--sale' : ''}">${fmtPrice(p.price)} <small>₴/${esc(p.unit)}</small></span>
+        ${p.oldPrice ? `<span class="old">${fmtPrice(p.oldPrice)}</span>` : ''}
+      </div>
+      <div class="card__flags">${flags}</div>
     </div>
   </a>`;
+}
+
+const skeleton = (n = 12) =>
+  `<p class="count">&nbsp;</p><div class="grid">${'<div class="card skeleton"><div class="card__media"></div><div class="card__body"><div class="sk"></div><div class="sk" style="width:60%"></div><div class="sk" style="width:40%;height:18px;margin-top:8px"></div></div></div>'.repeat(n)}</div>`;
+
+// Ряд розділів на комп'ютері: стрілки, прокрутка коліщатком і перетягування мишею.
+function initGroupsRow(scrollLeft) {
+  const row = $('.groups');
+  const left = $('.gscroll--left');
+  const right = $('.gscroll--right');
+  const updateArrows = () => {
+    left.hidden = row.scrollLeft <= 2;
+    right.hidden = row.scrollLeft + row.clientWidth >= row.scrollWidth - 2;
+  };
+  if (scrollLeft != null) row.scrollLeft = scrollLeft;
+  else {
+    const active = row.querySelector('[aria-pressed=true]');
+    if (active) row.scrollLeft = active.offsetLeft - (row.clientWidth - active.offsetWidth) / 2;
+  }
+  updateArrows();
+  row.addEventListener('scroll', updateArrows, { passive: true });
+  for (const b of [left, right]) {
+    b.onclick = () => row.scrollBy({ left: Number(b.dataset.dir) * row.clientWidth * 0.7, behavior: 'smooth' });
+  }
+  // Вертикальне коліщатко миші → горизонтальна прокрутка (поки є куди крутити).
+  row.addEventListener(
+    'wheel',
+    (e) => {
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+      const max = row.scrollWidth - row.clientWidth;
+      if ((e.deltaY < 0 && row.scrollLeft <= 0) || (e.deltaY > 0 && row.scrollLeft >= max)) return;
+      e.preventDefault();
+      row.scrollLeft += e.deltaY;
+    },
+    { passive: false },
+  );
+  // Перетягування мишею; якщо тягнули — клік по чипу не спрацьовує.
+  let drag = null;
+  row.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    drag = { x: e.clientX, left: row.scrollLeft, moved: false };
+  });
+  row.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x;
+    if (Math.abs(dx) > 5) {
+      drag.moved = true;
+      row.classList.add('is-dragging');
+    }
+    if (drag.moved) row.scrollLeft = drag.left - dx;
+  });
+  const end = () => {
+    if (drag?.moved) {
+      const block = (e) => e.stopPropagation();
+      row.addEventListener('click', block, { capture: true });
+      setTimeout(() => {
+        row.removeEventListener('click', block, { capture: true });
+        row.classList.remove('is-dragging');
+      });
+    }
+    drag = null;
+  };
+  row.addEventListener('pointerup', end);
+  row.addEventListener('pointerleave', end);
 }
 
 function renderList() {
   document.querySelector('.top').classList.remove('is-product');
   document.title = 'Ціни АТБ — історія цін';
   const list = filtered();
+  // Ряд розділів перемальовується разом зі списком — зберігаємо його горизонтальну прокрутку.
+  const scrollLeft = $('.groups')?.scrollLeft;
+  const chip = (g, label, n) =>
+    `<button class="gchip" data-group="${esc(g)}" aria-pressed="${filters.group === g}">${label}${n != null ? `<small>${n}</small>` : ''}</button>`;
+  const groupsRow = `<div class="groups-wrap">
+    <button class="gscroll gscroll--left" data-dir="-1" aria-label="Прокрутити розділи ліворуч" hidden>‹</button>
+    <nav class="groups" aria-label="Розділи">${chip('', 'Усі товари')}${state.groups
+      .map(([g, n]) => chip(g, `<span aria-hidden="true">${GROUPS.get(g) || '📦'}</span>${esc(g)}`, n))
+      .join('')}</nav>
+    <button class="gscroll gscroll--right" data-dir="1" aria-label="Прокрутити розділи праворуч" hidden>›</button>
+  </div>`;
   if (!list.length) {
-    app.innerHTML = '<p class="status">Нічого не знайдено</p>';
+    app.innerHTML = `${groupsRow}<div class="empty"><b>🔍</b>Нічого не знайдено<br><span class="note">Спробуйте іншу назву або приберіть фільтри</span></div>`;
+    initGroupsRow(scrollLeft);
     return;
   }
-  app.innerHTML = `<p class="count">Знайдено: ${list.length.toLocaleString('uk')}</p>
+  let count = `Знайдено: ${list.length.toLocaleString('uk')}`;
+  if (filters.sort === 'inflated') {
+    const n = list.filter((p) => inflation(p) > 0).length;
+    count += n ? ` · із завищеною «ціною до знижки»: ${n}` : ' · акцій із завищеною «ціною до знижки» поки не виявлено';
+  }
+  app.innerHTML = `${groupsRow}<p class="count">${count}</p>
     <div class="grid">${list.slice(0, state.shown).map(card).join('')}</div>
     ${list.length > state.shown ? '<button class="more" id="more">Показати ще</button>' : ''}`;
+  initGroupsRow(scrollLeft);
   const more = $('#more');
   if (more) {
     more.onclick = () => {
@@ -159,34 +350,50 @@ const RANGES = [
   ['Усе', Infinity],
 ];
 
+// Мітки з сайту АТБ: знижка («-20% до 27.10») і рекламні кампанії, які на АТБ мають лише
+// короткий значок («DC») з підказкою («Безмежний всесвіт DC») — показуємо підказку.
+const KNOWN_HINTS = { DC: 'Безмежний всесвіт DC' }; // для даних, зібраних до появи поля labels
+function labelsHtml(p) {
+  const labels = p.labels || (p.label ? [{ text: p.label, hint: KNOWN_HINTS[p.label] }] : []);
+  return labels
+    .map((l) =>
+      l.hint
+        ? `<span class="product__promo" title="Рекламна кампанія АТБ">🎁 ${esc(l.hint)}</span>`
+        : `<span class="product__label">${esc(l.text)}</span>`,
+    )
+    .join('');
+}
+
 async function renderProduct(id) {
   document.querySelector('.top').classList.add('is-product');
   const p = state.byId.get(id);
   scrollTo(0, 0);
   if (!p) {
-    app.innerHTML = '<a class="back" href="#/">← До списку</a><p class="status">Товар не знайдено — можливо, його вже немає в каталозі.</p>';
+    app.innerHTML = '<a class="back" href="#/">← Усі товари</a><p class="status">Товар не знайдено — можливо, його вже немає в каталозі.</p>';
     return;
   }
   document.title = `${p.name} — Ціни АТБ`;
-  app.innerHTML = `<a class="back" href="#/">← До списку</a>
+  app.innerHTML = `<a class="back" href="#/">← Усі товари</a>
     <div class="product">
-      <img class="product__img" src="${esc(p.img)}" alt="">
+      <div class="product__media"><img class="product__img" src="${esc(p.img)}" alt=""></div>
       <div>
         <h1>${esc(p.name)}</h1>
-        <div class="product__meta">${[p.category, p.brand].filter(Boolean).map(esc).join(' · ')}</div>
+        <div class="chips">${[p.group, p.category, p.brand].filter(Boolean).map((c) => `<span class="chip">${esc(c)}</span>`).join('')}</div>
         <div class="product__price">
           <span class="price ${p.oldPrice ? 'price--sale' : ''}">${fmtPrice(p.price)} <small>грн/${esc(p.unit)}</small></span>
           ${p.oldPrice ? `<span class="old">${fmtPrice(p.oldPrice)}</span>` : ''}
-          ${p.label ? `<span class="product__label">${esc(p.label)}</span>` : ''}
+          ${labelsHtml(p)}
         </div>
         <div id="warn"></div>
-        <p><a class="btn" href="https://www.atbmarket.com${esc(p.url)}" target="_blank" rel="noopener">Відкрити на atbmarket.com ↗</a></p>
+        <div class="product__actions"><a class="btn btn--primary" href="https://www.atbmarket.com${esc(p.url)}" target="_blank" rel="noopener">Відкрити на atbmarket.com ↗</a></div>
       </div>
     </div>
     <section class="panel">
-      <h2>Історія ціни</h2>
-      <div class="ranges" role="group" aria-label="Період">${RANGES.map(([l], i) => `<button data-r="${i}" aria-pressed="${i === 4}">${l}</button>`).join('')}</div>
-      <div class="chart" id="chart"><p class="status">Завантаження…</p></div>
+      <div class="panel__head">
+        <h2>Історія ціни</h2>
+        <div class="seg ranges" role="group" aria-label="Період">${RANGES.map(([l], i) => `<button data-r="${i}" aria-pressed="${i === 4}">${l}</button>`).join('')}</div>
+      </div>
+      <div class="chart" id="chart"><div class="sk" style="height:280px;border-radius:12px"></div></div>
       <div id="stats"></div>
     </section>`;
 
@@ -194,7 +401,7 @@ async function renderProduct(id) {
   if (state.byId.get(id) !== p || !$('#chart')) return;
   const cur = segments(hist, Infinity).at(-1);
   if (p.oldPrice && cur?.inflated) {
-    $('#warn').innerHTML = `<p class="warn-box">⚠ <span>Ціну до знижки завищено: перед акцією товар коштував <b>${fmtPrice(cur.ref)} грн</b>, а не ${fmtPrice(p.oldPrice)} грн.
+    $('#warn').innerHTML = `<p class="warn-box"><b>⚠</b><span>Ціну до знижки завищено: перед акцією товар коштував <b>${fmtPrice(cur.ref)} грн</b>, а не ${fmtPrice(p.oldPrice)} грн.
       ${realDiscount(p.price, cur.ref)}, а не знижка ${pct(p.price, p.oldPrice)}%.</span></p>`;
   }
   let range = 4;
@@ -310,6 +517,10 @@ function renderChart(el, hist, days, unit) {
   const swatch = (cls) => `<svg width="18" height="10" aria-hidden="true"><path class="${cls}" d="M1,5H17"/></svg>`;
 
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Графік ціни">
+      <defs><linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" style="stop-color:var(--chart-line);stop-opacity:.22"/>
+        <stop offset="1" style="stop-color:var(--chart-line);stop-opacity:0"/>
+      </linearGradient></defs>
       <g class="axis">${grid}${xt}</g>
       ${bands}
       <path class="area" d="${area}"/>
@@ -404,11 +615,14 @@ function renderStats(el, hist, days, unit) {
 
 function route() {
   const m = location.hash.match(/^#\/p\/(\d+)/);
-  if (m) renderProduct(Number(m[1]));
-  else renderList();
+  const render = () => (m ? renderProduct(Number(m[1])) : renderList());
+  if (document.startViewTransition && !matchMedia('(prefers-reduced-motion: reduce)').matches) document.startViewTransition(render);
+  else render();
 }
 
-loadData()
+app.innerHTML = skeleton();
+loadCities()
+  .then(loadData)
   .then(() => {
     bindFilters();
     addEventListener('hashchange', route);

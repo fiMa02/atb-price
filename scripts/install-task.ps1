@@ -8,7 +8,7 @@ $action = New-ScheduledTaskAction -Execute 'powershell.exe' `
     -WorkingDirectory (Split-Path $PSScriptRoot -Parent)
 $trigger = New-ScheduledTaskTrigger -Daily -At $At
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -RunOnlyIfNetworkAvailable `
-    -ExecutionTimeLimit (New-TimeSpan -Hours 1)
+    -ExecutionTimeLimit (New-TimeSpan -Hours 3)
 
 Register-ScheduledTask -TaskName 'ATB Price' -Action $action -Trigger $trigger -Settings $settings `
     -Description 'Щоденний збір цін АТБ і публікація на GitHub' -Force | Out-Null

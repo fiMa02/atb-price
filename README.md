@@ -7,7 +7,7 @@
 ## Як це працює
 
 ```
-Планувальник Windows (щодня 07:30) → scripts/daily.ps1 → scraper/scrape.js → site/data/*.json → git push → GitHub Actions → GitHub Pages
+Планувальник Windows (щодня 05:30) → scripts/daily.ps1 → scraper/scrape.js → site/data/*.json → git push → GitHub Actions → GitHub Pages
 ```
 
 Ціни збираються **з домашнього комп'ютера**: сайт АТБ (Cloudflare) блокує запити з серверів GitHub (HTTP 403). GitHub лише публікує сайт після кожного push.
@@ -42,7 +42,7 @@ npm run serve    # відкрити сайт на http://localhost:3000
    powershell -ExecutionPolicy Bypass -File scripts\install-task.ps1
    ```
 
-Далі все працює саме: щодня комп'ютер збирає ціни й пушить їх, а GitHub оновлює сайт. Якщо комп'ютер о 07:30 вимкнений, збір запуститься, щойно його увімкнуть.
+Далі все працює саме: щодня комп'ютер збирає ціни й пушить їх, а GitHub оновлює сайт. Якщо комп'ютер о 05:30 вимкнений, збір запуститься, щойно його увімкнуть.
 
 Видалити завдання: `Unregister-ScheduledTask -TaskName 'ATB Price'`.
 

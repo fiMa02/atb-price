@@ -1,6 +1,6 @@
 ﻿# Реєструє щоденне завдання «ATB Price» у Планувальнику завдань Windows.
 # Якщо о вказаний час комп'ютер вимкнено — завдання виконається, щойно він увімкнеться.
-param([string]$At = '07:30')
+param([string]$At = '05:30')
 
 $script = Join-Path $PSScriptRoot 'daily.ps1'
 $action = New-ScheduledTaskAction -Execute 'powershell.exe' `

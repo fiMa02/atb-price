@@ -13,6 +13,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { CITIES } from './cities.js';
 import { buildGroupMap, groupOf } from './groups.js';
+import { buildCompare } from './compare.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -312,6 +313,7 @@ async function main() {
     if (meta) index.push({ slug: city.slug, name: city.name, address: meta.store.address, productCount: meta.productCount, updated: meta.updated });
   }
   await fs.writeFile(path.join(DATA_DIR, 'cities.json'), JSON.stringify(index, null, 2));
+  await buildCompare(DATA_DIR);
 
   console.log(`Готово за ${Math.round((Date.now() - started) / 60000)} хв: міст ${Object.keys(results).length}, з помилками ${failed.length}${failed.length ? ` (${failed.join(', ')})` : ''}`);
   if (!Object.keys(results).length) process.exit(1);

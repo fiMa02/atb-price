@@ -618,8 +618,13 @@ async function renderProduct(id) {
       </div>
       <div class="chart" id="chart"><div class="sk" style="height:280px;border-radius:12px"></div></div>
       <div id="stats"></div>
+    </section>
+    <section class="panel" id="compare">
+      <div class="panel__head"><h2>Ціна в інших містах</h2></div>
+      <div class="sk" style="height:120px;border-radius:12px"></div>
     </section>`;
   bindFavTarget(p);
+  renderCompare($('#compare'), p);
   // Користувач побачив поточну ціну — знижка «з обраного» для цього товару вже не нова.
   if (isFav(id) && favDrop(p, favs[id])) markSeen([id]);
 
@@ -646,6 +651,87 @@ async function renderProduct(id) {
   const ro = new ResizeObserver(() => $('#chart') && draw());
   ro.observe($('#chart'));
   addEventListener('hashchange', () => ro.disconnect(), { once: true });
+}
+
+// ---------- Ціни в інших містах ----------
+// data/compare/NN.json: { id: { місто: ціна | [ціна, ціна_до_знижки] } } — будує scraper/compare.js.
+
+const compareShards = new Map();
+async function loadCompare(id) {
+  const shard = String(id % SHARDS).padStart(2, '0');
+  if (!compareShards.has(shard)) {
+    compareShards.set(shard, fetch(`data/compare/${shard}.json`).then((r) => (r.ok ? r.json() : {})).catch(() => ({})));
+  }
+  return (await compareShards.get(shard))[id] || {};
+}
+
+const COMPARE_SHOWN = 8;
+
+async function renderCompare(el, p) {
+  const prices = await loadCompare(p.id);
+  if (!el.isConnected) return;
+  const rows = state.cities
+    .filter((c) => prices[c.slug] != null)
+    .map((c) => {
+      const v = prices[c.slug];
+      const [price, old] = Array.isArray(v) ? v : [v, null];
+      return { c, price, old };
+    })
+    .sort((a, b) => a.price - b.price || a.c.name.localeCompare(b.c.name, 'uk'));
+  if (rows.length < 2) {
+    el.remove();
+    return;
+  }
+  const here = rows.find((r) => r.c === state.city);
+  const min = rows[0].price;
+  const max = rows.at(-1).price;
+  const cheapest = rows.filter((r) => r.price === min).map((r) => r.c.name);
+  const absent = state.cities.length - rows.length;
+
+  let summary;
+  if (min === max) summary = `Однакова ціна в усіх ${rows.length} містах.`;
+  else {
+    summary = `Найдешевше — ${esc(cheapest.slice(0, 3).join(', '))}${cheapest.length > 3 ? ` і ще ${cheapest.length - 3}` : ''}: <b>${fmtPrice(min)} грн</b>. Найдорожче — <b>${fmtPrice(max)} грн</b>.`;
+    if (here) {
+      const cheaper = rows.filter((r) => r.price < here.price).length;
+      summary += here.price === min ? ` У місті ${esc(here.c.name)} — найнижча ціна.` : ` У місті ${esc(here.c.name)} на ${Math.round((here.price / min - 1) * 100) || '<1'}% дорожче за найдешевше; дешевше — у ${cheaper} з ${rows.length - 1} міст.`;
+    }
+  }
+
+  const pos = (v) => (max > min ? ((v - min) / (max - min)) * 100 : 50);
+  const diff = (r) => {
+    if (r === here) return '<span class="crow__diff">ваше місто</span>';
+    if (!here) return '';
+    const d = (r.price / here.price - 1) * 100;
+    if (Math.abs(d) < 0.5) return '<span class="crow__diff">так само</span>';
+    return `<span class="crow__diff crow__diff--${d < 0 ? 'down' : 'up'}">${d < 0 ? '−' : '+'}${Math.abs(d) < 1 ? '<1' : Math.round(Math.abs(d))}%</span>`;
+  };
+  const row = (r, i) => `<button class="crow${r === here ? ' is-here' : ''}${i >= COMPARE_SHOWN && r !== here ? ' is-extra' : ''}" data-city="${r.c.slug}"
+      title="${r === here ? 'Поточне місто' : `Перейти до міста ${esc(r.c.name)}`}">
+      <span class="crow__city">${esc(r.c.name)}</span>
+      <span class="crow__track" aria-hidden="true"><i style="left:${pos(r.price).toFixed(1)}%"></i></span>
+      <span class="crow__price${r.old ? ' price--sale' : ''}">${fmtPrice(r.price)}${r.old ? ` <span class="old">${fmtPrice(r.old)}</span>` : ''}</span>
+      ${diff(r)}
+    </button>`;
+  const extra = rows.filter((r, i) => i >= COMPARE_SHOWN && r !== here).length;
+  el.innerHTML = `<div class="panel__head"><h2>Ціна в інших містах</h2></div>
+    <p class="compare__summary">${summary}</p>
+    <div class="crows">${rows.map(row).join('')}</div>
+    ${extra ? `<button class="compare__more" id="compareMore">Показати всі міста (${rows.length})</button>` : ''}
+    <p class="note">Ціни за ${fmtDate(parseDate(state.meta.updated))}, по одному магазину в кожному місті${absent ? `; у ${absent} містах товару немає в асортименті` : ''}. Натисніть місто, щоб перейти до нього.</p>`;
+  const more = $('#compareMore');
+  if (more) {
+    more.onclick = () => {
+      el.classList.add('is-open');
+      more.remove();
+    };
+  }
+  el.onclick = (e) => {
+    const b = e.target.closest('[data-city]');
+    if (!b || b.dataset.city === state.city.slug) return;
+    $('#city').value = b.dataset.city;
+    $('#city').dispatchEvent(new Event('change'));
+  };
 }
 
 // Акцію вважаємо «завищеною», якщо ціна до знижки вища за звичайну ціну перед акцією (з допуском 0,5%).

@@ -36,6 +36,8 @@ const realSaving = (p) => (p.oldPrice ? 1 - p.price / Math.min(p.oldPrice, p.reg
 // Кількість беремо з назви: «0,5 кг», «170мл», «4х115 г», «(76 ф/п х 2г)», «200+100 мл», «30 шт».
 const QTY_UNIT = { кг: ['кг', 1], г: ['кг', 1e-3], гр: ['кг', 1e-3], л: ['л', 1], мл: ['л', 1e-3] };
 const QTY_MULTI = /(\d+|\(\d+\+\d+\))\s*(?:ф\/п|пак\.?|шт\.?|капс\.?)?\s*[хx*]\s*(\d+(?:[.,]\d+)?)\s*(кг|гр|г|мл|л)(?![а-яіїєґa-z])/i;
+// «18г x 10 шт», «200 мл х 2» — вага першою, далі кількість (без одиниці виміру або «шт»/«пак»).
+const QTY_MULTI_REV = /(?<![\d.,])(\d+(?:[.,]\d+)?)\s*(кг|гр|г|мл|л)\s*[хx*]\s*(\d+)(?![\d.,])(?!\s*(?:кг|гр|г|мл|л|см|мм|м)(?![а-яіїєґa-z]))/i;
 // «200+100 мл», «140 г+15 г», «350г + 100г» — акційна упаковка з бонусом.
 const QTY_SUM = /(?<![\d.,])(\d+(?:[.,]\d+)?)\s*(кг|гр|г|мл|л)?\s*\+\s*(\d+(?:[.,]\d+)?)\s*(кг|гр|г|мл|л)(?![а-яіїєґa-z])/i;
 const QTY_ONE = /(?<![\d.,])(\d+(?:[.,]\d+)?)\s*(кг|гр|г|мл|л)(?![а-яіїєґa-z])/i;
@@ -54,6 +56,11 @@ function parseWeight(name) {
   if (m) {
     const [unit, k] = QTY_UNIT[m[3].toLowerCase()];
     return { unit, qty: qtyNum(m[1]) * qtyNum(m[2]) * k };
+  }
+  m = name.match(QTY_MULTI_REV);
+  if (m) {
+    const [unit, k] = QTY_UNIT[m[2].toLowerCase()];
+    return { unit, qty: qtyNum(m[1]) * qtyNum(m[3]) * k };
   }
   const one = name.match(QTY_ONE);
   m = name.match(QTY_SUM);

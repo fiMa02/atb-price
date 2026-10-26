@@ -15,7 +15,17 @@ const fmtDate = (t, withYear = true) => {
   return withYear ? `${dd}.${mm}.${d.getUTCFullYear()}` : `${dd}.${mm}`;
 };
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-const norm = (s) => s.toLowerCase().replace(/ё/g, 'е').replace(/[’'`ʼ]/g, '');
+// У назвах АТБ трапляються латинські двійники в кириличних словах («Снідaнок», «Днiпромлин») і навпаки:
+// зводимо змішане слово до тієї абетки, в яку перекладаються всі «чужі» літери (спершу пробуємо кирилицю).
+const TO_CYR = { a: 'а', b: 'в', c: 'с', e: 'е', h: 'н', i: 'і', k: 'к', m: 'м', o: 'о', p: 'р', t: 'т', x: 'х', y: 'у' };
+const TO_LAT = Object.fromEntries(Object.entries(TO_CYR).map(([l, c]) => [c, l]));
+const unmix = (w) => {
+  if (!/[а-яіїєґ]/.test(w) || !/[a-z]/.test(w)) return w;
+  if (/^[^a-z]*$/.test(w.replace(/[abcehikmoptxy]/g, ''))) return w.replace(/[a-z]/g, (c) => TO_CYR[c]);
+  if (/^[^а-яіїєґ]*$/.test(w.replace(/[авсенікмортху]/g, ''))) return w.replace(/[авсенікмортху]/g, (c) => TO_LAT[c]);
+  return w;
+};
+const norm = (s) => s.toLowerCase().replace(/ё/g, 'е').replace(/[’'`ʼ]/g, '').replace(/[^\s]+/g, unmix);
 const discount = (p) => (p.oldPrice ? 1 - p.price / p.oldPrice : 0);
 const inflation = (p) => (isInflated(p.oldPrice, p.regular) ? p.oldPrice / p.regular - 1 : 0);
 // Реальна знижка: від меншої з цін — «до знижки» чи тієї, що була перед акцією.

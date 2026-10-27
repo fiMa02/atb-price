@@ -389,7 +389,8 @@ select {
 /* Мапа цін по містах */
 .umap { position: relative; margin: 4px auto 6px; max-width: 880px; }
 .umap svg { display: block; width: 100%; height: auto; overflow: visible; }
-.umap__regions path { fill: var(--surface-2); stroke: var(--surface); stroke-width: 1.6; stroke-linejoin: round; }
+.umap__regions path { fill: var(--surface-2); fill-rule: evenodd; stroke: var(--surface); stroke-width: 1.6; stroke-linejoin: round; transition: fill .15s; }
+.umap__regions path.is-picked { fill: var(--accent-soft); }
 .mcity { cursor: pointer; }
 .mcity__dot { fill: var(--tone); stroke: var(--surface); stroke-width: 3; }
 .mcity:hover .mcity__dot { stroke: var(--ink); stroke-width: 2.5; }

@@ -1149,15 +1149,33 @@ async function renderCompare(el, p) {
     svg.addEventListener('pointerleave', (e) => {
       if (e.pointerType === 'mouse') tip.hidden = true;
     });
+    // Сенсорний екран: дотик будь-де в області — найближче до дотику місто цієї області.
+    const cityInRegion = (region, e) => {
+      const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(svg.getScreenCTM().inverse());
+      let best = null;
+      let bestD = Infinity;
+      for (const g of svg.querySelectorAll('.mcity')) {
+        const { e: x, f: y } = g.transform.baseVal.consolidate().matrix;
+        if (!region.isPointInFill(new DOMPoint(x, y))) continue;
+        const d = Math.hypot(x - pt.x, y - pt.y);
+        if (d < bestD) [best, bestD] = [g, d];
+      }
+      return best;
+    };
     svg.addEventListener('click', (e) => {
-      const g = e.target.closest('.mcity');
+      const touch = !matchMedia('(hover: hover)').matches;
+      const region = touch && e.target.closest('.umap__regions path');
+      const g = e.target.closest('.mcity') || (region && cityInRegion(region, e));
+      for (const r of svg.querySelectorAll('.umap__regions .is-picked')) r.classList.remove('is-picked');
       if (!g) {
         tip.hidden = true;
         return;
       }
       // Мишею — одразу перехід; на сенсорному екрані спершу підказка з кнопкою.
-      if (matchMedia('(hover: hover)').matches) go(g.dataset.city);
-      else showTip(g, true);
+      if (!touch) return go(g.dataset.city);
+      const { e: x, f: y } = g.transform.baseVal.consolidate().matrix;
+      [...svg.querySelectorAll('.umap__regions path')].find((r) => r.isPointInFill(new DOMPoint(x, y)))?.classList.add('is-picked');
+      showTip(g, true);
     });
   }
   el.onclick = (e) => {

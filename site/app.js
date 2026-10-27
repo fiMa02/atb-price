@@ -487,13 +487,13 @@ function bindFavTarget(p) {
 
 // ---------- Фільтри ----------
 
-const filters = { q: '', group: '', cat: '', sort: 'name', sale: false };
+const filters = { q: '', group: '', cat: '', sort: 'name', sale: false, card: false };
 try {
   Object.assign(filters, JSON.parse(sessionStorage.getItem('filters') || '{}'));
 } catch {}
 // Параметри з адреси (?sort=inflated&q=молоко&sale=1) мають пріоритет — щоб можна було ділитися посиланнями.
 for (const [k, v] of new URLSearchParams(location.search)) {
-  if (k === 'sale') filters.sale = v === '1';
+  if (k === 'sale' || k === 'card') filters[k] = v === '1';
   else if (k in filters) filters[k] = v;
 }
 if (filters.sort === 'per-asc') filters.sort = 'per-kg'; // колишнє «Дешевші за кг/л»
@@ -512,12 +512,14 @@ function bindFilters() {
   $('#cat').value = filters.cat;
   $('#sort').value = filters.sort;
   $('#sale').checked = filters.sale;
+  $('#card').checked = filters.card;
   let t;
   const update = () => {
     filters.q = $('#q').value;
     filters.cat = $('#cat').value;
     filters.sort = $('#sort').value;
     filters.sale = $('#sale').checked;
+    filters.card = $('#card').checked;
     applyFilters();
   };
   // Серце на картці (вона — посилання, тож не даємо перейти) і кнопка на сторінці товару.
@@ -555,7 +557,7 @@ function bindFilters() {
     clearTimeout(t);
     t = setTimeout(update, 150);
   });
-  for (const id of ['#cat', '#sort', '#sale']) $(id).addEventListener('change', update);
+  for (const id of ['#cat', '#sort', '#sale', '#card']) $(id).addEventListener('change', update);
 }
 
 // Ціна за 1 кг / л / шт (вагові товари — за їхньою ціною); null, якщо для цієї одиниці невідома.
@@ -575,6 +577,7 @@ function filtered() {
       (!filters.group || (p.group || 'Інше') === filters.group) &&
       (!filters.cat || p.category === filters.cat) &&
       (!filters.sale || p.oldPrice) &&
+      (!filters.card || p.cardPrice) &&
       words.every((w) => p._q.includes(w)),
   );
   const sorters = {
@@ -700,6 +703,8 @@ function initGroupsRow(scrollLeft) {
 // changes.json будує scraper/changes.js: зміни останнього збору відносно попереднього дня.
 
 const changeKind = (c) => (!c.fromOld && c.toOld ? 'sale' : c.fromOld && !c.toOld ? 'saleEnd' : c.to < c.from ? 'down' : 'up');
+// Українські форми числівника: 1 товар, 2 товари, 5 товарів.
+const plural = (n, one, few, many) => (n % 10 === 1 && n % 100 !== 11 ? one : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? few : many);
 const pctChange = (c) => (c.to / c.from - 1) * 100;
 
 function todayData() {
@@ -727,9 +732,9 @@ function todayBanner() {
   const parts = [
     n('down') && `<span class="tb__down">↓ ${n('down')}</span>`,
     n('up') && `<span class="tb__up">↑ ${n('up')}</span>`,
-    n('sale') && `<span>% ${n('sale')} нових акцій</span>`,
-    n('saleEnd') && `<span>⌛ ${n('saleEnd')} акцій закінчилось</span>`,
-    n('new') && `<span>✦ ${n('new')} нових товарів</span>`,
+    n('sale') && `<span>% ${n('sale')} ${plural(n('sale'), 'нова акція', 'нові акції', 'нових акцій')}</span>`,
+    n('saleEnd') && `<span>⌛ ${n('saleEnd')} ${plural(n('saleEnd'), 'акція закінчилась', 'акції закінчились', 'акцій закінчилось')}</span>`,
+    n('new') && `<span>✦ ${n('new')} ${plural(n('new'), 'новий товар', 'нові товари', 'нових товарів')}</span>`,
     n('back') && `<span>↺ ${n('back')} знову в наявності</span>`,
   ].filter(Boolean);
   if (!parts.length && !n('gone')) return '';

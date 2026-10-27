@@ -713,7 +713,8 @@ function todayData() {
   const rows = ch.prices.map((c) => ({ c, p: state.byId.get(c.id), kind: changeKind(c) })).filter((r) => r.p);
   const tabs = [
     ['down', '↓ Подешевшало', rows.filter((r) => r.c.to < r.c.from).sort((a, b) => pctChange(a.c) - pctChange(b.c))],
-    ['up', '↑ Подорожчало', rows.filter((r) => r.c.to > r.c.from).sort((a, b) => pctChange(b.c) - pctChange(a.c))],
+    // Лише звичайне подорожчання: без акції ні до, ні після (кінець акції — окрема вкладка «Акція закінчилась»).
+    ['up', '↑ Подорожчало', rows.filter((r) => r.c.to > r.c.from && !r.c.fromOld && !r.c.toOld).sort((a, b) => pctChange(b.c) - pctChange(a.c))],
     ['sale', '% Нові акції', rows.filter((r) => r.kind === 'sale').sort((a, b) => discount(b.p) - discount(a.p))],
     // Від найбільшої колишньої знижки.
     ['saleEnd', '⌛ Акція закінчилась', rows.filter((r) => r.kind === 'saleEnd').sort((a, b) => a.c.from / a.c.fromOld - b.c.from / b.c.fromOld)],

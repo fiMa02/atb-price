@@ -305,6 +305,7 @@ select {
   .card:hover .fav-btn, .card .fav-btn:focus-visible { opacity: 1; }
 }
 .card--missing { opacity: .6; }
+.card--missing .card__body { gap: 4px; }
 /* Рекламна плитка — розміром з картку товару, з чіткою позначкою «Реклама» */
 .ad { position: relative; border: 1px dashed var(--line); box-shadow: none; }
 @media (hover: hover) { .card.ad:hover { transform: none; box-shadow: none; } }
@@ -343,14 +344,6 @@ select {
 .atbcard--big { font-size: 15px; padding: 6px 14px 6px 10px; margin-top: 10px; }
 .atbcard--big .atbcard__icon { width: 18px; height: 18px; }
 .atbcard--big .note { color: inherit; opacity: .75; }
-
-/* Немає в наявності: картка лишається клікабельною, але приглушена */
-.tag--out { color: var(--ink-2); background: var(--surface-2); }
-.card--out .card__img { filter: grayscale(1); opacity: .55; }
-.out-box {
-  background: var(--surface-2); color: var(--ink); border-radius: var(--r-md);
-  padding: 10px 14px; margin: 0 0 12px; font-size: 14px; line-height: 1.45;
-}.card--missing .card__body { gap: 4px; }
 
 /* Ціна в інших містах: точка на шкалі від найдешевшого до найдорожчого */
 .compare__summary { margin: 0 0 12px; font-size: 14px; color: var(--ink-2); }
@@ -503,7 +496,6 @@ button:hover, .btn:hover { border-color: var(--accent); }
 .chart .axis text { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; font-family: inherit; }
 .chart .gridline { stroke: var(--grid); stroke-width: 1; }
 .chart .line { fill: none; stroke: var(--chart-line); stroke-width: 2.5; stroke-linejoin: round; }
-.chart .line--out, .legend .line--out { fill: none; stroke: var(--chart-line); stroke-width: 2.5; stroke-dasharray: 2 5; stroke-linecap: round; opacity: .7; }
 .chart .card-line, .legend .card-line { fill: none; stroke: var(--good); stroke-width: 2; stroke-dasharray: 6 3; }
 .tip__card { color: var(--good); font-weight: 600; }
 .chart .area { fill: url(#areaGrad); }

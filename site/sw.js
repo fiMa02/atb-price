@@ -1,5 +1,5 @@
 // Оболонка сайту — з кешу; дані — спершу з мережі (щоб ціни були свіжими), з кешу лише офлайн.
-const CACHE = 'pricetrail-v27';
+const CACHE = 'pricetrail-v28';
 // Обране (копія з localStorage сторінки) і вже надіслані сповіщення — не видаляються при оновленні.
 const STATE = 'pricetrail-state';
 const SHELL = ['./', 'index.html', 'style.css', 'app.js', 'icon.svg', 'manifest.webmanifest'];
@@ -50,7 +50,7 @@ async function checkFavs() {
   for (const [id, f] of Object.entries(saved.favs)) {
     const p = byId.get(+id);
     const seen = f.seen?.[saved.city];
-    if (!p || p.out || seen == null || !(p.price < seen - 0.004 && (!f.target || p.price <= f.target))) continue;
+    if (!p || seen == null || !(p.price < seen - 0.004 && (!f.target || p.price <= f.target))) continue;
     const key = `${saved.city}:${id}`;
     if (notified[key] === p.price) continue; // про цю ціну вже повідомляли
     notified[key] = p.price;

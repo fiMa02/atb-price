@@ -13,13 +13,16 @@ export async function buildCompare(dataDir) {
   const shards = Array.from({ length: SHARDS }, () => ({}));
   for (const city of CITIES) {
     let products;
+    let updated;
     try {
       products = JSON.parse(await fs.readFile(path.join(dataDir, 'cities', city.slug, 'products.json'), 'utf8'));
+      ({ updated } = JSON.parse(await fs.readFile(path.join(dataDir, 'cities', city.slug, 'meta.json'), 'utf8')));
     } catch {
       continue;
     }
     for (const p of products) {
-      if (p.out) continue; // немає в наявності — у порівнянні не показуємо
+      // Товар поза каталогом — лише якщо його ціну звірили зі сторінки товару в останньому зборі.
+      if (p.out && p.checked !== updated) continue;
       const shard = shards[p.id % SHARDS];
       (shard[p.id] ||= {})[city.slug] = p.oldPrice ? [p.price, p.oldPrice] : p.price;
     }

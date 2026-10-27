@@ -1,5 +1,5 @@
 // Оболонка сайту — з кешу; дані — спершу з мережі (щоб ціни були свіжими), з кешу лише офлайн.
-const CACHE = 'pricetrail-v28';
+const CACHE = 'pricetrail-v29';
 // Обране (копія з localStorage сторінки) і вже надіслані сповіщення — не видаляються при оновленні.
 const STATE = 'pricetrail-state';
 const SHELL = ['./', 'index.html', 'style.css', 'app.js', 'icon.svg', 'manifest.webmanifest'];
@@ -43,8 +43,10 @@ async function checkFavs() {
   const st = await caches.open(STATE);
   const saved = await st.match('state/favs').then((r) => r?.json());
   if (!saved?.city || !saved.favs || !Object.keys(saved.favs).length) return;
-  const products = await fetch(`data/cities/${saved.city}/products.json`, { cache: 'no-store' }).then((r) => r.json());
-  const byId = new Map(products.map((p) => [p.id, p]));
+  const load = (file) => fetch(`data/cities/${saved.city}/${file}`, { cache: 'no-store' }).then((r) => (r.ok ? r.json() : []));
+  // extra.json — товари, яких у місті немає, з цінами найближчого міста.
+  const [own, extra] = await Promise.all([load('products.json'), load('extra.json').catch(() => [])]);
+  const byId = new Map(extra.concat(own).map((p) => [p.id, p]));
   const notified = (await st.match('state/notified').then((r) => r?.json())) || {};
   const hits = [];
   for (const [id, f] of Object.entries(saved.favs)) {

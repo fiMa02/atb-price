@@ -218,10 +218,17 @@ function initCityMenu() {
 }
 
 async function loadData() {
-  const [products, meta] = await Promise.all([
+  // Каталог спільний для всіх міст: products.json — товари цього міста, extra.json — решта,
+  // з цінами найближчого міста, де вони є (поле from), — будує scraper/fallback.js.
+  const [own, extra, meta] = await Promise.all([
     fetch(`${cityDir()}/products.json`).then((r) => r.json()),
+    fetch(`${cityDir()}/extra.json`)
+      .then((r) => (r.ok ? r.json() : []))
+      .catch(() => []),
     fetch(`${cityDir()}/meta.json`).then((r) => r.json()),
   ]);
+  const collator = new Intl.Collator('uk');
+  const products = own.concat(extra).sort((a, b) => collator.compare(a.name, b.name));
   state.byId = new Map();
   state.shards = new Map();
   for (const p of products) {
@@ -289,13 +296,14 @@ const GROUPS = new Map([
   ['Сертифікати та платіжні картки', '💳'],
 ]);
 
-async function loadHistory(id) {
-  const shard = id % SHARDS;
-  if (!state.shards.has(shard)) {
-    state.shards.set(shard, fetch(`${cityDir()}/history/${String(shard).padStart(2, '0')}.json`).then((r) => r.json()));
-  }
-  return (await state.shards.get(shard))[id] || [];
+// slug — місто, з якого історія (для товарів, яких у вибраному місті немає, — місто-джерело ціни).
+async function loadHistory(id, slug = state.city.slug) {
+  const shard = String(id % SHARDS).padStart(2, '0');
+  const key = `${slug}/${shard}`;
+  if (!state.shards.has(key)) state.shards.set(key, fetch(`data/cities/${slug}/history/${shard}.json`).then((r) => r.json()));
+  return (await state.shards.get(key))[id] || [];
 }
+const cityName = (slug) => state.cities.find((c) => c.slug === slug)?.name || slug;
 
 // ---------- Обране і сповіщення ----------
 // favs[id] = { name, img, unit, target, seen: { місто: ціна } }.
@@ -617,7 +625,7 @@ function card(p, from, extra = '') {
   return `<a class="card" href="#/p/${p.id}">
     <div class="card__media">
       <img class="card__img" src="${esc(p.img)}" alt="" loading="lazy" decoding="async">
-      ${sale}
+      <div class="card__corner">${p.from ? `<span class="elsewhere" title="Ціна з міста ${esc(cityName(p.from))} — найближчого, де є цей товар">Немає у вибраному місті</span>` : ''}${sale}</div>
       <button class="fav-btn" data-fav="${p.id}" aria-pressed="${isFav(p.id)}" aria-label="${isFav(p.id) ? 'Прибрати з обраного' : 'Додати в обране'}">${HEART}</button>
     </div>
     <div class="card__body">
@@ -912,6 +920,7 @@ async function renderProduct(id) {
       <div>
         <h1>${esc(p.name)}</h1>
         <div class="chips">${[p.group, p.category, p.brand].filter(Boolean).map((c) => `<span class="chip">${esc(c)}</span>`).join('')}</div>
+        ${p.from ? `<p class="elsewhere-box">Цього товару немає в магазині АТБ у місті ${esc(state.city.name)}. Ціни та історія — з міста <b>${esc(cityName(p.from))}</b>, найближчого, де він є.</p>` : ''}
         <div class="product__price">
           <span class="price ${p.oldPrice ? 'price--sale' : ''}">${fmtPrice(p.price)} <small>грн/${esc(p.unit)}</small></span>
           ${p.oldPrice ? `<span class="old">${fmtPrice(p.oldPrice)}</span>` : ''}
@@ -940,7 +949,7 @@ async function renderProduct(id) {
   // Користувач побачив поточну ціну — знижка «з обраного» для цього товару вже не нова.
   if (isFav(id) && favDrop(p, favs[id])) markSeen([id]);
 
-  const hist = await loadHistory(id);
+  const hist = await loadHistory(id, p.from);
   if (state.byId.get(id) !== p || !$('#chart')) return;
   const cur = segments(hist, Infinity).at(-1);
   if (p.oldPrice && cur?.inflated) {

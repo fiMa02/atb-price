@@ -14,6 +14,7 @@ import { promisify } from 'node:util';
 import { CITIES } from './cities.js';
 import { buildGroupMap, groupOf } from './groups.js';
 import { buildCompare } from './compare.js';
+import { buildFallback } from './fallback.js';
 import { isOut, writeChanges } from './changes.js';
 
 const execFileAsync = promisify(execFile);
@@ -422,6 +423,7 @@ async function main() {
   }
   await fs.writeFile(path.join(DATA_DIR, 'cities.json'), JSON.stringify(index, null, 2));
   await buildCompare(DATA_DIR);
+  await buildFallback(DATA_DIR);
 
   console.log(`Готово за ${Math.round((Date.now() - started) / 60000)} хв: міст ${Object.keys(results).length}, з помилками ${failed.length}${failed.length ? ` (${failed.join(', ')})` : ''}`);
   if (!Object.keys(results).length) process.exit(1);

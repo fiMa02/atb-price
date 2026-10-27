@@ -24,6 +24,12 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Похідні дані будуємо тут, а не комітимо щодня (вони великі й повністю виводяться з products.json):
+      # порівняння міст (data/compare) і спільний каталог (data/cities/*/extra.json).
+      - run: node scraper/compare.js && node scraper/fallback.js
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:

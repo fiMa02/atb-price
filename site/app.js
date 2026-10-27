@@ -596,6 +596,8 @@ function filtered() {
 // ---------- Список ----------
 
 // from — попередня ціна, яку показуємо поруч («↓ було 34,90»): на сторінках «Обране» і «Що змінилося».
+const CARD_ICON = '<svg class="atbcard__icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6.5 15h4"/></svg>';
+
 // extra — додаткова позначка (HTML) на початку рядка позначок.
 function card(p, from, extra = '') {
   const sale = p.oldPrice ? `<span class="badge">−${Math.round(discount(p) * 100)}%</span>` : '';
@@ -624,6 +626,7 @@ function card(p, from, extra = '') {
         ${p.oldPrice ? `<span class="old">${fmtPrice(p.oldPrice)}</span>` : ''}
         ${perHtml(p)}
       </div>
+      ${p.cardPrice ? `<div class="atbcard" title="Ціна при оплаті карткою АТБ">${CARD_ICON}<b>${fmtPrice(p.cardPrice)}</b> з карткою</div>` : ''}
       <div class="card__flags">${extra}${flags}</div>
     </div>
   </a>`;
@@ -879,6 +882,7 @@ async function renderProduct(id) {
           ${labelsHtml(p)}
           ${p._per ? `<span class="product__per">${fmtPrice(p._per.price)} грн за 1 ${p._per.unit}</span>` : ''}
         </div>
+        ${p.cardPrice ? `<div class="atbcard atbcard--big">${CARD_ICON}<b>${fmtPrice(p.cardPrice)} грн</b> при оплаті карткою АТБ <span class="note">(−${pct(p.cardPrice, p.price)}%)</span></div>` : ''}
         <div id="warn"></div>
         <div class="product__actions"><span class="fav-actions">${favActions(p)}</span><a class="btn btn--primary" href="https://www.atbmarket.com${esc(p.url)}" target="_blank" rel="noopener">Відкрити на atbmarket.com ↗</a></div>
       </div>
@@ -1020,14 +1024,15 @@ function segments(hist, days) {
   const start = Number.isFinite(days) ? end - days * DAY : -Infinity;
   const segs = [];
   let regular = null;
-  // [дата, ціна, стара, 1] — ціна, поки товару немає в наявності; [дата, null] — ціна невідома (розрив).
-  hist.forEach(([d, price, old, out], i) => {
+  // [дата, ціна, стара, 1] — ціна, поки товару немає в наявності; [дата, null] — ціна невідома (розрив);
+  // п'яте поле — ціна при оплаті карткою АТБ.
+  hist.forEach(([d, price, old, out, card], i) => {
     const from = parseDate(d);
     const to = i + 1 < hist.length ? parseDate(hist[i + 1][0]) : end;
     if (price != null && !old) regular = price;
     if (price == null || to <= start) return;
     const ref = old ? regular : null;
-    segs.push({ from: Math.max(from, start), to, price, old: old ?? null, ref, inflated: isInflated(old, ref), out: out === 1 });
+    segs.push({ from: Math.max(from, start), to, price, old: old ?? null, ref, inflated: isInflated(old, ref), out: out === 1, card: card ?? null });
   });
   return segs;
 }
@@ -1049,7 +1054,7 @@ function renderChart(el, hist, days, unit) {
   const m = { l: 46, r: 12, t: 12, b: 26 };
   const x0 = segs[0].from;
   const x1 = segs.at(-1).to;
-  const values = segs.flatMap((s) => [s.price, s.old, s.inflated ? s.ref : null]).filter((v) => v != null);
+  const values = segs.flatMap((s) => [s.price, s.old, s.card, s.inflated ? s.ref : null]).filter((v) => v != null);
   let lo = Math.min(...values);
   let hi = Math.max(...values);
   if (hi - lo < hi * 0.04) {
@@ -1080,6 +1085,7 @@ function renderChart(el, hist, days, unit) {
   // Ступінчаста лінія; розрив, якщо товар зникав з каталогу.
   let path = '';
   let outPath = ''; // пунктир: ціна, поки товару немає в наявності
+  let cardPath = ''; // ціна при оплаті карткою АТБ
   let area = '';
   let bands = '';
   let oldPath = ''; // «ціна до знижки» під час акцій
@@ -1087,6 +1093,7 @@ function renderChart(el, hist, days, unit) {
   let refPath = ''; // фактична звичайна ціна перед завищеною акцією
   segs.forEach((s, i) => {
     const p = segs[i - 1];
+    if (s.card) cardPath += `${p?.card && p.to === s.from ? `V${Y(s.card)}` : `M${X(s.from)},${Y(s.card)}`}H${X(s.to)}`;
     if (s.out) {
       // Пунктир від рівня попередньої ціни, щоб лінія не рвалась.
       const joined = p && p.to === s.from;
@@ -1120,6 +1127,7 @@ function renderChart(el, hist, days, unit) {
       <path class="area" d="${area}"/>
       <path class="line" d="${path}"/>
       <path class="line line--out" d="${outPath}"/>
+      <path class="card-line" d="${cardPath}"/>
       <path class="old-line" d="${oldPath}"/>
       <path class="ref-line" d="${refPath}"/>
       <path class="old-line old-line--inflated" d="${inflPath}"/>
@@ -1131,6 +1139,7 @@ function renderChart(el, hist, days, unit) {
     <div class="legend">
       <span><i style="background:var(--chart-line)"></i>Ціна, грн/${esc(unit)}</span>
       ${outPath ? `<span>${swatch('line line--out')}Немає в наявності</span>` : ''}
+      ${cardPath ? `<span>${swatch('card-line')}З карткою АТБ</span>` : ''}
       ${hasSale ? '<span><i style="background:var(--sale);opacity:.25"></i>Акція</span>' : ''}
       ${oldPath ? `<span>${swatch('old-line')}Ціна до знижки</span>` : ''}
       ${hasInflated ? `<span>${swatch('old-line old-line--inflated')}⚠ Завищена ціна до знижки</span><span>${swatch('ref-line')}Ціна перед акцією</span>` : ''}
@@ -1162,6 +1171,7 @@ function renderChart(el, hist, days, unit) {
     dot.setAttribute('visibility', 'visible');
     let html = `${fmtDate(day)}<br><b>${fmtPrice(s.price)} грн</b>`;
     if (s.old) html += ` <span class="old">${fmtPrice(s.old)}</span> акція −${pct(s.price, s.old)}%`;
+    if (s.card) html += `<br><span class="tip__card">з карткою АТБ ${fmtPrice(s.card)} грн</span>`;
     if (s.out) html += '<br><span class="note">Немає в наявності</span>';
     if (s.inflated) {
       html += `<br><span class="warn">⚠ Перед акцією було ${fmtPrice(s.ref)} грн</span><br>${realDiscount(s.price, s.ref)}`;
@@ -1192,12 +1202,15 @@ function renderStats(el, hist, days, unit) {
   const min = Math.min(...prices);
   const max = Math.max(...prices);
   const first = parseDate(hist[0][0]);
+  const hasCard = hist.some((h) => h[4]);
   const rows = hist
     .slice()
     .reverse()
     .map(
-      ([d, p, o, out]) =>
-        `<tr><td>${fmtDate(parseDate(d))}</td><td>${p == null ? 'немає в наявності' : `${fmtPrice(p)}${out === 1 ? ' <span class="note">(немає в наявності)</span>' : ''}`}</td><td>${o ? fmtPrice(o) : ''}</td></tr>`,
+      ([d, p, o, out, card]) =>
+        `<tr><td>${fmtDate(parseDate(d))}</td><td>${p == null ? 'немає в наявності' : `${fmtPrice(p)}${out === 1 ? ' <span class="note">(немає в наявності)</span>' : ''}`}</td><td>${o ? fmtPrice(o) : ''}</td>${
+          hasCard ? `<td>${card ? fmtPrice(card) : ''}</td>` : ''
+        }</tr>`,
     )
     .join('');
   el.innerHTML = `<div class="stats">
@@ -1207,7 +1220,7 @@ function renderStats(el, hist, days, unit) {
       <div class="stat"><div class="stat__k">Відстежується з</div><div class="stat__v">${fmtDate(first)}</div></div>
     </div>
     <details class="table"><summary>Таблиця змін ціни (${hist.length})</summary>
-      <div class="tablewrap"><table><thead><tr><th>Дата</th><th>Ціна, грн/${esc(unit)}</th><th>Ціна до знижки</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="tablewrap"><table><thead><tr><th>Дата</th><th>Ціна, грн/${esc(unit)}</th><th>Ціна до знижки</th>${hasCard ? "<th>З карткою АТБ</th>" : ""}</tr></thead><tbody>${rows}</tbody></table></div>
     </details>`;
 }
 

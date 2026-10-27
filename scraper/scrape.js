@@ -41,8 +41,16 @@ const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Kyiv' }).form
 const daysBetween = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 86400000);
 
 // ---------- Історія цін ----------
+// Запис історії: [дата, ціна, стара_ціна, немає_в_наявності (1), ціна_з_карткою_АТБ]; порожній хвіст відкидаємо.
+function entry(price, oldPrice, out, cardPrice) {
+  const e = [today, price, oldPrice ?? null, out ? 1 : 0, cardPrice ?? null];
+  while (e.length > 2 && !e.at(-1)) e.pop();
+  return e;
+}
 const sameEntry = (a, b) =>
-  !!a && isOut(a) === isOut(b) && (b[1] == null || (a[1] === b[1] && (a[2] ?? null) === (b[2] ?? null)));
+  !!a &&
+  isOut(a) === isOut(b) &&
+  (b[1] == null || (a[1] === b[1] && (a[2] ?? null) === (b[2] ?? null) && (a[4] ?? null) === (b[4] ?? null)));
 // Записує сьогоднішній стан, якщо він відрізняється від попереднього. Повторний збір того ж дня
 // замінює сьогоднішній запис і не дублює вчорашній. Повертає true, якщо історія змінилась.
 function record(hist, entry) {
@@ -197,6 +205,8 @@ function parseCards(html) {
       img: card.find('img.catalog-item__img').attr('src') || null,
       price,
       oldPrice: num(card.find('.product-price__bottom').attr('value')),
+      // Ціна при оплаті карткою АТБ (фільтр «З карткою АТБ» на сайті; зазвичай −5%).
+      cardPrice: num(card.find('.atbcard-sale__price-top').attr('value')),
       unit: card.find('.product-price__unit').first().text().replace('/', '').trim() || 'шт',
       category: cart.attr('data-category') || null,
       brand: cart.attr('data-brand') || null,
@@ -228,7 +238,12 @@ async function productPage(href, storeId) {
   const read = (sel) => num(box.find(sel).children('span').first().text().trim());
   const price = read('.product-price__top');
   if (!price) return null;
-  return { price, oldPrice: read('.product-price__bottom'), labels: parseLabels($, $('.product-about__labels').first().find('.custom-product-label')) };
+  return {
+    price,
+    oldPrice: read('.product-price__bottom'),
+    cardPrice: num($('.product-about .atbcard-sale__price-top').first().attr('value')),
+    labels: parseLabels($, $('.product-about__labels').first().find('.custom-product-label')),
+  };
 }
 
 async function scrapeCategory(href, storeId, products) {
@@ -277,7 +292,7 @@ async function scrapeCity(city, store, categories, groupMap) {
   for (const p of products.values()) {
     p.group = groupOf(p.category, groupMap);
     const hist = (shards[p.id % SHARDS][p.id] ||= []);
-    if (record(hist, p.oldPrice ? [today, p.price, p.oldPrice] : [today, p.price])) changed++;
+    if (record(hist, entry(p.price, p.oldPrice, false, p.cardPrice))) changed++;
     derive(p, hist);
   }
 
@@ -313,7 +328,7 @@ async function scrapeCity(city, store, categories, groupMap) {
     }
     for (const { id, hist, shard, base } of missing) {
       const page = pages.get(id);
-      if (page && record(hist, [today, page.price, page.oldPrice, 1])) changed++;
+      if (page && record(hist, entry(page.price, page.oldPrice, true, page.cardPrice))) changed++;
       if (!page) record(hist, [today, null]);
       if (!hist.length) {
         delete shard[id]; // з'явився й зник того самого дня
@@ -324,7 +339,7 @@ async function scrapeCity(city, store, categories, groupMap) {
       if (page) {
         // Мітки акції беремо зі сторінки, лише якщо ціна змінилась — у каталозі вони детальніші («-20% до 27.10»).
         const moved = page.price !== base.price || page.oldPrice !== (base.oldPrice ?? null);
-        Object.assign(item, { price: page.price, oldPrice: page.oldPrice, checked: today }, moved ? { labels: page.labels } : {});
+        Object.assign(item, { price: page.price, oldPrice: page.oldPrice, cardPrice: page.cardPrice, checked: today }, moved ? { labels: page.labels } : {});
       }
       derive(item, hist);
       out.push(item);

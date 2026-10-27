@@ -9,6 +9,8 @@ import path from 'node:path';
 
 // Запис історії «немає в наявності»: [дата, null] або [дата, ціна, стара_ціна, 1].
 export const isOut = (h) => h[1] == null || h[3] === 1;
+// Змінилась ціна або акція (сама лише поява/зникнення ціни з карткою АТБ у стрічку не потрапляє).
+const priceMoved = (a, b) => a[1] !== b[1] || (a[2] ?? null) !== (b[2] ?? null);
 
 const readJson = async (file, fallback) => {
   try {
@@ -40,7 +42,7 @@ export async function writeChanges(dir, shards, products, today, oldList) {
         if (!isOut(before)) {
           const p = known.get(id);
           if (p) changes.removed.push({ id, name: p.name, img: p.img, unit: p.unit, price: before[1] });
-        } else if (last[1] != null && before[1] != null) {
+        } else if (last[1] != null && before[1] != null && priceMoved(before, last)) {
           // Ціна змінилась, поки товару немає в наявності (дізнались зі сторінки товару).
           changes.prices.push({ id, from: before[1], fromOld: before[2] ?? null, to: last[1], toOld: last[2] ?? null });
         }
@@ -48,7 +50,7 @@ export async function writeChanges(dir, shards, products, today, oldList) {
         if (!firstDay && products.has(id)) changes.added.push(id);
       } else if (isOut(before)) {
         if (products.has(id)) changes.back.push(id);
-      } else {
+      } else if (priceMoved(before, last)) {
         changes.prices.push({ id, from: before[1], fromOld: before[2] ?? null, to: last[1], toOld: last[2] ?? null });
       }
     }

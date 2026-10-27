@@ -258,7 +258,8 @@ async function scrapeCity(city, store, categories, groupMap) {
   const oldList = await readJson(path.join(dir, 'products.json'), []);
   await writeChanges(dir, shards, products, today, oldList);
 
-  // Зниклі товари лишаємо в каталозі як «немає в наявності» (з останньою ціною) ще OUT_KEEP_DAYS днів.
+  // Зниклі товари лишаємо в каталозі як «немає в наявності» ще OUT_KEEP_DAYS днів —
+  // в останньому відомому стані (ціна, акція, мітки), лише з позначкою out (дата зникнення).
   const known = new Map(oldList.map((p) => [p.id, p]));
   const out = [];
   for (const shard of shards) {
@@ -266,10 +267,7 @@ async function scrapeCity(city, store, categories, groupMap) {
       const id = Number(key);
       const [since, price] = hist.at(-1);
       if (products.has(id) || price !== null || !known.has(id) || daysBetween(since, today) > OUT_KEEP_DAYS) continue;
-      const last = hist.findLast((h) => h[1] != null);
-      if (!last) continue;
-      const p = known.get(id);
-      out.push({ ...p, price: last[1], oldPrice: null, labels: [], changed: since, prev: null, regular: null, out: since });
+      out.push({ ...known.get(id), out: since });
     }
   }
   const list = [...products.values(), ...out].sort((a, b) => a.name.localeCompare(b.name, 'uk'));

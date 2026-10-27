@@ -511,15 +511,11 @@ function filtered() {
 // from — попередня ціна, яку показуємо поруч («↓ було 34,90»): на сторінках «Обране» і «Що змінилося».
 function card(p, from) {
   const sale = p.oldPrice ? `<span class="badge">−${Math.round(discount(p) * 100)}%</span>` : '';
-  let flags = '';
-  if (p.out) {
-    flags = `<span class="tag tag--out" title="Остання ціна ${fmtPrice(p.price)} грн">Немає в наявності з ${fmtDate(parseDate(p.out), false)}</span>`;
-  } else if (isInflated(p.oldPrice, p.regular)) {
+  let flags = p.out ? `<span class="tag tag--out" title="Остання відома ціна — ${fmtPrice(p.price)} грн">Немає в наявності з ${fmtDate(parseDate(p.out), false)}</span>` : '';
+  if (isInflated(p.oldPrice, p.regular)) {
     flags += `<span class="tag tag--warn" title="Перед акцією було ${fmtPrice(p.regular)} грн — ціну до знижки завищено">⚠ до акції ${fmtPrice(p.regular)}</span>`;
   }
-  if (p.out) {
-    // без позначок зміни ціни
-  } else if (from != null && Math.abs(p.price - from) > 0.004) {
+  if (from != null && Math.abs(p.price - from) > 0.004) {
     const up = p.price > from;
     flags += `<span class="tag tag--${up ? 'up' : 'down'}" title="Попередня ціна ${fmtPrice(from)} грн">${up ? '↑' : '↓'} було ${fmtPrice(from)}</span>`;
   } else if (p.prev && p.prev !== p.price && !p.oldPrice) {
@@ -778,7 +774,7 @@ async function renderProduct(id) {
         <h1>${esc(p.name)}</h1>
         <div class="chips">${[p.group, p.category, p.brand].filter(Boolean).map((c) => `<span class="chip">${esc(c)}</span>`).join('')}</div>
         ${p.out ? `<p class="out-box"><b>Немає в наявності</b> з ${fmtDate(parseDate(p.out))} у магазині АТБ (${esc(state.city.name)}). Нижче — остання відома ціна та її історія.</p>` : ''}
-        <div class="product__price${p.out ? ' is-out' : ''}">
+        <div class="product__price">
           <span class="price ${p.oldPrice ? 'price--sale' : ''}">${fmtPrice(p.price)} <small>грн/${esc(p.unit)}</small></span>
           ${p.oldPrice ? `<span class="old">${fmtPrice(p.oldPrice)}</span>` : ''}
           ${labelsHtml(p)}

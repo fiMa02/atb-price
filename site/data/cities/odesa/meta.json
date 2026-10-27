@@ -1,11 +1,11 @@
 {
   "updated": "2026-10-27",
-  "updatedAt": "2026-10-26T23:01:59.257Z",
-  "productCount": 3728,
+  "updatedAt": "2026-10-27T03:37:01.608Z",
+  "productCount": 3729,
+  "outCount": 27,
   "store": {
     "id": 1230,
     "address": "дор. Фонтанська, буд. 121",
     "cityId": 543
-  },
-  "outCount": 28
+  }
 }

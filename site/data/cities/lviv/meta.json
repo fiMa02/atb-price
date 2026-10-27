@@ -1,11 +1,11 @@
 {
   "updated": "2026-10-27",
-  "updatedAt": "2026-10-26T23:05:01.574Z",
+  "updatedAt": "2026-10-27T03:40:37.696Z",
   "productCount": 4205,
+  "outCount": 39,
   "store": {
     "id": 1032,
     "address": "вул. Липинського В., 36",
     "cityId": 433
-  },
-  "outCount": 39
+  }
 }

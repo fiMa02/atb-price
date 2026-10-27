@@ -1,11 +1,11 @@
 {
   "updated": "2026-10-27",
-  "updatedAt": "2026-10-26T23:28:48.678Z",
+  "updatedAt": "2026-10-27T04:07:23.706Z",
   "productCount": 4093,
+  "outCount": 52,
   "store": {
     "id": 1184,
     "address": "вул. Українська, 58",
     "cityId": 687
-  },
-  "outCount": 52
+  }
 }

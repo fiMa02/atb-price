@@ -1,11 +1,11 @@
 {
   "updated": "2026-10-27",
-  "updatedAt": "2026-10-26T23:13:46.469Z",
+  "updatedAt": "2026-10-27T03:50:09.216Z",
   "productCount": 4072,
+  "outCount": 20,
   "store": {
     "id": 435,
     "address": "вул. Всіхсвятська, 5",
     "cityId": 409
-  },
-  "outCount": 20
+  }
 }

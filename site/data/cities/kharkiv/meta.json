@@ -1,11 +1,11 @@
 {
   "updated": "2026-10-27",
-  "updatedAt": "2026-10-26T23:02:04.900Z",
+  "updatedAt": "2026-10-27T03:36:58.075Z",
   "productCount": 4137,
+  "outCount": 18,
   "store": {
     "id": 574,
     "address": "просп. Аерокосмічний, буд. 181",
     "cityId": 423
-  },
-  "outCount": 18
+  }
 }

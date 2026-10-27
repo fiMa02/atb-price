@@ -1,11 +1,11 @@
 {
   "updated": "2026-10-27",
-  "updatedAt": "2026-10-26T23:23:00.061Z",
-  "productCount": 3972,
+  "updatedAt": "2026-10-27T04:01:08.293Z",
+  "productCount": 3976,
+  "outCount": 16,
   "store": {
     "id": 539,
     "address": "вул. Є.Маланюка, 1",
     "cityId": 411
-  },
-  "outCount": 19
+  }
 }

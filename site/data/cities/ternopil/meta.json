@@ -1,11 +1,11 @@
 {
   "updated": "2026-10-27",
-  "updatedAt": "2026-10-26T23:25:47.928Z",
+  "updatedAt": "2026-10-27T04:03:33.977Z",
   "productCount": 3948,
+  "outCount": 15,
   "store": {
     "id": 1126,
     "address": "вул. Леся Курбаса, 2 а",
     "cityId": 509
-  },
-  "outCount": 15
+  }
 }

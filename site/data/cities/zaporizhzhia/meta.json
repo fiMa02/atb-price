@@ -1,11 +1,11 @@
 {
   "updated": "2026-10-27",
-  "updatedAt": "2026-10-26T23:05:08.071Z",
-  "productCount": 4358,
+  "updatedAt": "2026-10-27T03:40:22.465Z",
+  "productCount": 4368,
+  "outCount": 18,
   "store": {
     "id": 1034,
     "address": "вул. Космічна, 126 б",
     "cityId": 381
-  },
-  "outCount": 27
+  }
 }

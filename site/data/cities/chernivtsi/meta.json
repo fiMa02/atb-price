@@ -1,11 +1,11 @@
 {
   "updated": "2026-10-27",
-  "updatedAt": "2026-10-26T23:29:10.915Z",
+  "updatedAt": "2026-10-27T04:08:03.873Z",
   "productCount": 4308,
+  "outCount": 46,
   "store": {
     "id": 1731,
     "address": "вул. Калинівська, 13-в",
     "cityId": 679
-  },
-  "outCount": 46
+  }
 }

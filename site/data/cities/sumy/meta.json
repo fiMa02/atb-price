@@ -1,11 +1,11 @@
 {
   "updated": "2026-10-27",
-  "updatedAt": "2026-10-26T23:19:43.463Z",
+  "updatedAt": "2026-10-27T03:57:00.810Z",
   "productCount": 4165,
+  "outCount": 13,
   "store": {
     "id": 636,
     "address": "вул. Героїв Крут, 76/3, прим. 1",
     "cityId": 577
-  },
-  "outCount": 13
+  }
 }

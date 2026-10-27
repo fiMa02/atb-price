@@ -1,11 +1,11 @@
 {
   "updated": "2026-10-27",
-  "updatedAt": "2026-10-26T23:08:03.649Z",
-  "productCount": 4265,
+  "updatedAt": "2026-10-27T03:43:51.869Z",
+  "productCount": 4269,
+  "outCount": 28,
   "store": {
     "id": 21,
     "address": "вул. Єгора Біркуна, буд. 9",
     "cityId": 393
-  },
-  "outCount": 32
+  }
 }

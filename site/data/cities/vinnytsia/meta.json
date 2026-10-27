@@ -1,11 +1,11 @@
 {
   "updated": "2026-10-27",
-  "updatedAt": "2026-10-26T23:10:51.889Z",
-  "productCount": 4077,
+  "updatedAt": "2026-10-27T03:47:32.735Z",
+  "productCount": 4088,
+  "outCount": 49,
   "store": {
     "id": 1297,
     "address": "вул. Липовецька, 6 а блок 4, блок 5",
     "cityId": 583
-  },
-  "outCount": 59
+  }
 }

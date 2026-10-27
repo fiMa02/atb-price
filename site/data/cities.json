@@ -3,14 +3,14 @@
     "slug": "kyiv",
     "name": "Київ",
     "address": "просп. Корольова  Академіка, 3",
-    "productCount": 4184,
+    "productCount": 4197,
     "updated": "2026-10-27"
   },
   {
     "slug": "dnipro",
     "name": "Дніпро",
     "address": "майдан Озерний, буд. 25",
-    "productCount": 4468,
+    "productCount": 4477,
     "updated": "2026-10-27"
   },
   {
@@ -24,7 +24,7 @@
     "slug": "odesa",
     "name": "Одеса",
     "address": "дор. Фонтанська, буд. 121",
-    "productCount": 3728,
+    "productCount": 3729,
     "updated": "2026-10-27"
   },
   {
@@ -38,14 +38,14 @@
     "slug": "zaporizhzhia",
     "name": "Запоріжжя",
     "address": "вул. Космічна, 126 б",
-    "productCount": 4358,
+    "productCount": 4368,
     "updated": "2026-10-27"
   },
   {
     "slug": "kryvyi-rih",
     "name": "Кривий Ріг",
     "address": "вул. Єгора Біркуна, буд. 9",
-    "productCount": 4265,
+    "productCount": 4269,
     "updated": "2026-10-27"
   },
   {
@@ -59,7 +59,7 @@
     "slug": "vinnytsia",
     "name": "Вінниця",
     "address": "вул. Липовецька, 6 а блок 4, блок 5",
-    "productCount": 4077,
+    "productCount": 4088,
     "updated": "2026-10-27"
   },
   {
@@ -87,14 +87,14 @@
     "slug": "khmelnytskyi",
     "name": "Хмельницький",
     "address": "вул. Вінницьке шосе, буд. 22-А",
-    "productCount": 3960,
+    "productCount": 3964,
     "updated": "2026-10-27"
   },
   {
     "slug": "zhytomyr",
     "name": "Житомир",
     "address": "вул. Домбровського, 3",
-    "productCount": 4125,
+    "productCount": 4130,
     "updated": "2026-10-27"
   },
   {
@@ -122,7 +122,7 @@
     "slug": "kropyvnytskyi",
     "name": "Кропивницький",
     "address": "вул. Є.Маланюка, 1",
-    "productCount": 3972,
+    "productCount": 3976,
     "updated": "2026-10-27"
   },
   {

@@ -1,11 +1,11 @@
 {
   "updated": "2026-10-27",
-  "updatedAt": "2026-10-26T23:20:04.055Z",
+  "updatedAt": "2026-10-27T03:58:02.151Z",
   "productCount": 4348,
+  "outCount": 20,
   "store": {
     "id": 1691,
     "address": "вул. Литовська, буд. 93-приміщення 100, 101",
     "cityId": 709
-  },
-  "outCount": 20
+  }
 }

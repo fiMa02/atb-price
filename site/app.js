@@ -712,10 +712,12 @@ function todayData() {
   if (!ch) return null;
   const rows = ch.prices.map((c) => ({ c, p: state.byId.get(c.id), kind: changeKind(c) })).filter((r) => r.p);
   const tabs = [
-    ['down', '↓ Подешевшало', rows.filter((r) => r.c.to < r.c.from).sort((a, b) => pctChange(a.c) - pctChange(b.c))],
+    // Лише звичайне здешевлення: без акції ні до, ні після (акції — окрема вкладка «Нові акції»).
+    ['down', '↓ Подешевшало', rows.filter((r) => r.c.to < r.c.from && !r.c.fromOld && !r.c.toOld).sort((a, b) => pctChange(a.c) - pctChange(b.c))],
     // Лише звичайне подорожчання: без акції ні до, ні після (кінець акції — окрема вкладка «Акція закінчилась»).
     ['up', '↑ Подорожчало', rows.filter((r) => r.c.to > r.c.from && !r.c.fromOld && !r.c.toOld).sort((a, b) => pctChange(b.c) - pctChange(a.c))],
-    ['sale', '% Нові акції', rows.filter((r) => r.kind === 'sale').sort((a, b) => discount(b.p) - discount(a.p))],
+    // Акція з'явилась або змінились її умови (інша акційна ціна) — від найбільшої знижки.
+    ['sale', '% Нові акції', rows.filter((r) => r.kind === 'sale' || (r.c.fromOld && r.c.toOld)).sort((a, b) => discount(b.p) - discount(a.p))],
     // Від найбільшої колишньої знижки.
     ['saleEnd', '⌛ Акція закінчилась', rows.filter((r) => r.kind === 'saleEnd').sort((a, b) => a.c.from / a.c.fromOld - b.c.from / b.c.fromOld)],
     ['new', '✦ Нові товари', ch.added.map((id) => ({ p: state.byId.get(id) })).filter((r) => r.p)],

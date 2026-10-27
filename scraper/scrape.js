@@ -419,7 +419,7 @@ async function main() {
   const index = [];
   for (const city of CITIES) {
     const meta = results[city.slug] || (await readJson(path.join(DATA_DIR, 'cities', city.slug, 'meta.json'), null));
-    if (meta) index.push({ slug: city.slug, name: city.name, address: meta.store.address, productCount: meta.productCount, updated: meta.updated });
+    if (meta) index.push({ slug: city.slug, name: city.name, lat: city.lat, lon: city.lon, address: meta.store.address, productCount: meta.productCount, updated: meta.updated });
   }
   await fs.writeFile(path.join(DATA_DIR, 'cities.json'), JSON.stringify(index, null, 2));
   await buildCompare(DATA_DIR);

@@ -987,10 +987,32 @@ async function loadCompare(id) {
   return (await compareShards.get(shard))[id] || {};
 }
 
-const COMPARE_SHOWN = 8;
+// Мапа: межі областей (geoBoundaries / OpenStreetMap, ODbL) у проєкції, з якою зберігали контури.
+let mapData;
+const loadMap = () => (mapData ||= fetch('data/ukraine.json').then((r) => r.json()));
+const mapXY = (m, c) => [(c.lon - m.lonMin) * m.k * m.cos, (m.latMax - c.lat) * m.k];
+// Куди ставити підпис міста, щоб сусідні не налазили один на одного (типово — праворуч).
+const LABEL_SIDE = {
+  kamianske: 'left',
+  'bila-tserkva': 'left',
+  mykolaiv: 'left',
+  odesa: 'left',
+  'kryvyi-rih': 'below',
+  kremenchuk: 'above',
+  cherkasy: 'left',
+  kropyvnytskyi: 'left',
+  lutsk: 'above',
+  rivne: 'above',
+  ternopil: 'left',
+  'ivano-frankivsk': 'below',
+  chernivtsi: 'below',
+  uzhhorod: 'below',
+  lviv: 'left',
+};
+const LABEL_AT = { right: [15, -2, 'start'], left: [-15, -2, 'end'], above: [0, -28, 'middle'], below: [0, 26, 'middle'] };
 
 async function renderCompare(el, p) {
-  const prices = await loadCompare(p.id);
+  const [prices, map] = await Promise.all([loadCompare(p.id), loadMap().catch(() => null)]);
   if (!el.isConnected) return;
   const rows = state.cities
     .filter((c) => prices[c.slug] != null)
@@ -1021,38 +1043,120 @@ async function renderCompare(el, p) {
   }
 
   const pos = (v) => (max > min ? ((v - min) / (max - min)) * 100 : 50);
-  const diff = (r) => {
-    if (r === here) return '<span class="crow__diff">ваше місто</span>';
-    if (!here) return '';
-    const d = (r.price / here.price - 1) * 100;
-    if (Math.abs(d) < 0.5) return '<span class="crow__diff">так само</span>';
-    return `<span class="crow__diff crow__diff--${d < 0 ? 'down' : 'up'}">${d < 0 ? '−' : '+'}${Math.abs(d) < 1 ? '<1' : Math.round(Math.abs(d))}%</span>`;
+  // Колір ціни: зелений (найдешевше) → нейтральний сірий (середина) → червоний (найдорожче).
+  const tone = (v) => {
+    if (max === min) return 'var(--accent)';
+    const t = pos(v) / 100;
+    return t <= 0.5
+      ? `color-mix(in oklab, var(--good) ${Math.round((1 - 2 * t) * 100)}%, var(--map-mid))`
+      : `color-mix(in oklab, var(--sale) ${Math.round((2 * t - 1) * 100)}%, var(--map-mid))`;
   };
-  const row = (r, i) => `<button class="crow${r === here ? ' is-here' : ''}${i >= COMPARE_SHOWN && r !== here ? ' is-extra' : ''}" data-city="${r.c.slug}"
+  const diffOf = (r) => {
+    if (r === here) return { text: 'ваше місто' };
+    if (!here) return null;
+    const d = (r.price / here.price - 1) * 100;
+    if (Math.abs(d) < 0.5) return { text: 'так само' };
+    return { text: `${d < 0 ? '−' : '+'}${Math.abs(d) < 1 ? '<1' : Math.round(Math.abs(d))}%`, cls: d < 0 ? 'down' : 'up' };
+  };
+  const diff = (r) => {
+    const d = diffOf(r);
+    return d ? `<span class="crow__diff${d.cls ? ` crow__diff--${d.cls}` : ''}">${d.text}</span>` : '';
+  };
+  const row = (r) => `<button class="crow${r === here ? ' is-here' : ''}" data-city="${r.c.slug}"
       title="${r === here ? 'Поточне місто' : `Перейти до міста ${esc(r.c.name)}`}">
       <span class="crow__city">${esc(r.c.name)}</span>
       <span class="crow__track" aria-hidden="true"><i style="left:${pos(r.price).toFixed(1)}%"></i></span>
       <span class="crow__price${r.old ? ' price--sale' : ''}">${fmtPrice(r.price)}${r.old ? ` <span class="old">${fmtPrice(r.old)}</span>` : ''}</span>
       ${diff(r)}
     </button>`;
-  const extra = rows.filter((r, i) => i >= COMPARE_SHOWN && r !== here).length;
+
+  let mapHtml = '';
+  if (map) {
+    const byCity = new Map(rows.map((r) => [r.c, r]));
+    const marks = state.cities
+      .filter((c) => c.lat != null)
+      .map((c) => {
+        const r = byCity.get(c);
+        const [x, y] = mapXY(map, c);
+        const at = `transform="translate(${x.toFixed(1)} ${y.toFixed(1)})"`;
+        if (!r) return `<g class="mcity mcity--none" data-city="${c.slug}" ${at}><circle r="5"/></g>`;
+        let [tx, ty, anchor] = LABEL_AT[LABEL_SIDE[c.slug] || 'right'];
+        if (r === here) [tx, ty] = [tx * 1.5, ty * 1.25]; // підпис не налазить на кільце «ваше місто»
+        return `<g class="mcity${r === here ? ' is-here' : ''}" data-city="${c.slug}" ${at} style="--tone:${tone(r.price)}">
+            ${r === here ? '<circle class="mcity__ring" r="15"/>' : ''}<circle class="mcity__dot" r="9"/>
+            <text class="mcity__label" x="${tx}" y="${ty}" text-anchor="${anchor}"><tspan class="mcity__name" x="${tx}">${esc(c.name)}</tspan><tspan class="mcity__price" x="${tx}" dy="17">${fmtPrice(r.price)}</tspan></text>
+          </g>`;
+      })
+      .join('');
+    mapHtml = `<div class="umap">
+        <svg viewBox="0 0 ${map.w} ${map.h}" role="img" aria-label="Мапа цін по містах України">
+          <g class="umap__regions">${map.regions.map((d) => `<path d="${d}"/>`).join('')}</g>
+          ${marks}
+        </svg>
+        <div class="tip umap__tip" hidden></div>
+      </div>
+      <div class="umap__legend">
+        ${max > min ? `<span class="umap__scale"><b>${fmtPrice(min)}</b><i aria-hidden="true"></i><b>${fmtPrice(max)}</b> грн</span>` : ''}
+        ${here ? '<span><i class="lg-here" aria-hidden="true"></i>ваше місто</span>' : ''}
+        ${absent ? '<span><i class="lg-none" aria-hidden="true"></i>товару немає</span>' : ''}
+      </div>`;
+  }
+
   el.innerHTML = `<div class="panel__head"><h2>Ціна в інших містах</h2></div>
     <p class="compare__summary">${summary}</p>
-    <div class="crows">${rows.map(row).join('')}</div>
-    ${extra ? `<button class="compare__more" id="compareMore">Показати всі міста (${rows.length})</button>` : ''}
-    <p class="note">Ціни за ${fmtDate(parseDate(state.meta.updated))}, по одному магазину в кожному місті${absent ? `; у ${absent} містах товару немає в асортименті` : ''}. Натисніть місто, щоб перейти до нього.</p>`;
-  const more = $('#compareMore');
-  if (more) {
-    more.onclick = () => {
-      el.classList.add('is-open');
-      more.remove();
-    };
+    ${mapHtml}
+    <details class="compare__list"${map ? '' : ' open'}><summary>Показати списком (${rows.length} ${plural(rows.length, 'місто', 'міста', 'міст')})</summary>
+      <div class="crows">${rows.map(row).join('')}</div>
+    </details>
+    <p class="note">Ціни за ${fmtDate(parseDate(state.meta.updated))}, по одному магазину в кожному місті${absent ? `; у ${absent} містах товару немає в асортименті` : ''}. Натисніть місто, щоб перейти до нього.${map ? ' Межі: geoBoundaries / © OpenStreetMap (ODbL).' : ''}</p>`;
+
+  const go = (slug) => {
+    if (slug === state.city.slug) return;
+    $('#city').value = slug;
+    $('#city').dispatchEvent(new Event('change'));
+  };
+  const tip = el.querySelector('.umap__tip');
+  const showTip = (g, touch) => {
+    const c = state.cities.find((x) => x.slug === g.dataset.city);
+    const r = rows.find((x) => x.c === c);
+    const d = r && diffOf(r);
+    const price = r
+      ? `<b>${fmtPrice(r.price)} грн</b>${r.old ? ` <span class="old">${fmtPrice(r.old)}</span>` : ''}${d ? ` · <span class="${d.cls ? `crow__diff--${d.cls}` : ''}">${d.text}</span>` : ''}`
+      : '<span class="note">товару немає</span>';
+    const btn = touch && r && r !== here ? `<br><button class="umap__go" data-go="${c.slug}">Обрати місто →</button>` : '';
+    tip.innerHTML = `<b>${esc(c.name)}</b><br>${price}${btn}`;
+    tip.hidden = false;
+    const box = el.querySelector('.umap').getBoundingClientRect();
+    const dot = g.querySelector('circle:last-of-type').getBoundingClientRect();
+    const cx = dot.left + dot.width / 2 - box.left;
+    tip.style.left = `${Math.min(Math.max(cx, tip.offsetWidth / 2 + 4), box.width - tip.offsetWidth / 2 - 4)}px`;
+    tip.style.top = `${dot.top - box.top - 6}px`;
+  };
+  const svg = el.querySelector('.umap svg');
+  if (svg) {
+    svg.addEventListener('pointermove', (e) => {
+      if (e.pointerType !== 'mouse') return;
+      const g = e.target.closest('.mcity');
+      if (g) showTip(g, false);
+      else tip.hidden = true;
+    });
+    svg.addEventListener('pointerleave', (e) => {
+      if (e.pointerType === 'mouse') tip.hidden = true;
+    });
+    svg.addEventListener('click', (e) => {
+      const g = e.target.closest('.mcity');
+      if (!g) {
+        tip.hidden = true;
+        return;
+      }
+      // Мишею — одразу перехід; на сенсорному екрані спершу підказка з кнопкою.
+      if (matchMedia('(hover: hover)').matches) go(g.dataset.city);
+      else showTip(g, true);
+    });
   }
   el.onclick = (e) => {
-    const b = e.target.closest('[data-city]');
-    if (!b || b.dataset.city === state.city.slug) return;
-    $('#city').value = b.dataset.city;
-    $('#city').dispatchEvent(new Event('change'));
+    const b = e.target.closest('.crow[data-city], [data-go]');
+    if (b) go(b.dataset.city || b.dataset.go);
   };
 }
 

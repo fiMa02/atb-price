@@ -2,6 +2,8 @@
   {
     "slug": "kyiv",
     "name": "Київ",
+    "lat": 50.45,
+    "lon": 30.524,
     "address": "просп. Корольова  Академіка, 3",
     "productCount": 4197,
     "updated": "2026-10-27"
@@ -9,6 +11,8 @@
   {
     "slug": "dnipro",
     "name": "Дніпро",
+    "lat": 48.465,
+    "lon": 35.046,
     "address": "майдан Озерний, буд. 25",
     "productCount": 4477,
     "updated": "2026-10-27"
@@ -16,6 +20,8 @@
   {
     "slug": "kharkiv",
     "name": "Харків",
+    "lat": 49.994,
+    "lon": 36.231,
     "address": "просп. Аерокосмічний, буд. 181",
     "productCount": 4137,
     "updated": "2026-10-27"
@@ -23,6 +29,8 @@
   {
     "slug": "odesa",
     "name": "Одеса",
+    "lat": 46.482,
+    "lon": 30.723,
     "address": "дор. Фонтанська, буд. 121",
     "productCount": 3729,
     "updated": "2026-10-27"
@@ -30,6 +38,8 @@
   {
     "slug": "lviv",
     "name": "Львів",
+    "lat": 49.84,
+    "lon": 24.03,
     "address": "вул. Липинського В., 36",
     "productCount": 4205,
     "updated": "2026-10-27"
@@ -37,6 +47,8 @@
   {
     "slug": "zaporizhzhia",
     "name": "Запоріжжя",
+    "lat": 47.838,
+    "lon": 35.139,
     "address": "вул. Космічна, 126 б",
     "productCount": 4368,
     "updated": "2026-10-27"
@@ -44,6 +56,8 @@
   {
     "slug": "kryvyi-rih",
     "name": "Кривий Ріг",
+    "lat": 47.91,
+    "lon": 33.392,
     "address": "вул. Єгора Біркуна, буд. 9",
     "productCount": 4269,
     "updated": "2026-10-27"
@@ -51,6 +65,8 @@
   {
     "slug": "mykolaiv",
     "name": "Миколаїв",
+    "lat": 46.975,
+    "lon": 31.995,
     "address": "вул. Привільна, буд. 71 А/1",
     "productCount": 3712,
     "updated": "2026-10-27"
@@ -58,6 +74,8 @@
   {
     "slug": "vinnytsia",
     "name": "Вінниця",
+    "lat": 49.233,
+    "lon": 28.468,
     "address": "вул. Липовецька, 6 а блок 4, блок 5",
     "productCount": 4088,
     "updated": "2026-10-27"
@@ -65,6 +83,8 @@
   {
     "slug": "poltava",
     "name": "Полтава",
+    "lat": 49.588,
+    "lon": 34.551,
     "address": "вул. Героїв АТО, 81",
     "productCount": 3665,
     "updated": "2026-10-27"
@@ -72,6 +92,8 @@
   {
     "slug": "chernihiv",
     "name": "Чернігів",
+    "lat": 51.494,
+    "lon": 31.294,
     "address": "вул. Всіхсвятська, 5",
     "productCount": 4072,
     "updated": "2026-10-27"
@@ -79,6 +101,8 @@
   {
     "slug": "cherkasy",
     "name": "Черкаси",
+    "lat": 49.444,
+    "lon": 32.06,
     "address": "вул. Грушевського Михайла, буд. 73/2",
     "productCount": 4232,
     "updated": "2026-10-27"
@@ -86,6 +110,8 @@
   {
     "slug": "khmelnytskyi",
     "name": "Хмельницький",
+    "lat": 49.422,
+    "lon": 26.987,
     "address": "вул. Вінницьке шосе, буд. 22-А",
     "productCount": 3964,
     "updated": "2026-10-27"
@@ -93,6 +119,8 @@
   {
     "slug": "zhytomyr",
     "name": "Житомир",
+    "lat": 50.254,
+    "lon": 28.658,
     "address": "вул. Домбровського, 3",
     "productCount": 4130,
     "updated": "2026-10-27"
@@ -100,6 +128,8 @@
   {
     "slug": "sumy",
     "name": "Суми",
+    "lat": 50.908,
+    "lon": 34.798,
     "address": "вул. Героїв Крут, 76/3, прим. 1",
     "productCount": 4165,
     "updated": "2026-10-27"
@@ -107,6 +137,8 @@
   {
     "slug": "rivne",
     "name": "Рівне",
+    "lat": 50.619,
+    "lon": 26.251,
     "address": "вул. Литовська, буд. 93-приміщення 100, 101",
     "productCount": 4348,
     "updated": "2026-10-27"
@@ -114,6 +146,8 @@
   {
     "slug": "ivano-frankivsk",
     "name": "Івано-Франківськ",
+    "lat": 48.922,
+    "lon": 24.711,
     "address": "вул. Максимовича, буд. 15",
     "productCount": 4318,
     "updated": "2026-10-27"
@@ -121,6 +155,8 @@
   {
     "slug": "kropyvnytskyi",
     "name": "Кропивницький",
+    "lat": 48.508,
+    "lon": 32.262,
     "address": "вул. Є.Маланюка, 1",
     "productCount": 3976,
     "updated": "2026-10-27"
@@ -128,6 +164,8 @@
   {
     "slug": "ternopil",
     "name": "Тернопіль",
+    "lat": 49.553,
+    "lon": 25.594,
     "address": "вул. Леся Курбаса, 2 а",
     "productCount": 3948,
     "updated": "2026-10-27"
@@ -135,6 +173,8 @@
   {
     "slug": "lutsk",
     "name": "Луцьк",
+    "lat": 50.747,
+    "lon": 25.325,
     "address": "вул. Карпенка-Карого, буд. 17",
     "productCount": 4264,
     "updated": "2026-10-27"
@@ -142,6 +182,8 @@
   {
     "slug": "uzhhorod",
     "name": "Ужгород",
+    "lat": 48.621,
+    "lon": 22.288,
     "address": "вул. Українська, 58",
     "productCount": 4093,
     "updated": "2026-10-27"
@@ -149,6 +191,8 @@
   {
     "slug": "chernivtsi",
     "name": "Чернівці",
+    "lat": 48.292,
+    "lon": 25.936,
     "address": "вул. Калинівська, 13-в",
     "productCount": 4308,
     "updated": "2026-10-27"
@@ -156,6 +200,8 @@
   {
     "slug": "kherson",
     "name": "Херсон",
+    "lat": 46.636,
+    "lon": 32.617,
     "address": "вул. Вишнева, 157/71",
     "productCount": 2822,
     "updated": "2026-10-27"
@@ -163,6 +209,8 @@
   {
     "slug": "bila-tserkva",
     "name": "Біла Церква",
+    "lat": 49.796,
+    "lon": 30.131,
     "address": "вул. Павліченко, 27",
     "productCount": 3895,
     "updated": "2026-10-27"
@@ -170,6 +218,8 @@
   {
     "slug": "kremenchuk",
     "name": "Кременчук",
+    "lat": 49.066,
+    "lon": 33.41,
     "address": "вул. Старшого лейтенанта Кагала, буд. 63 а",
     "productCount": 3970,
     "updated": "2026-10-27"
@@ -177,6 +227,8 @@
   {
     "slug": "kamianske",
     "name": "Кам'янське",
+    "lat": 48.507,
+    "lon": 34.613,
     "address": "просп. Василя Стуса, 2 б, прим. 161",
     "productCount": 3802,
     "updated": "2026-10-27"

@@ -421,6 +421,7 @@ button:hover, .btn:hover { border-color: var(--accent); }
 .chart .axis text { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; font-family: inherit; }
 .chart .gridline { stroke: var(--grid); stroke-width: 1; }
 .chart .line { fill: none; stroke: var(--chart-line); stroke-width: 2.5; stroke-linejoin: round; }
+.chart .line--out, .legend .line--out { fill: none; stroke: var(--chart-line); stroke-width: 2.5; stroke-dasharray: 2 5; stroke-linecap: round; opacity: .7; }
 .chart .area { fill: url(#areaGrad); }
 .chart .sale-band { fill: var(--sale); opacity: .09; }
 .chart .cross { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }

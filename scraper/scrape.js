@@ -14,7 +14,7 @@ import { promisify } from 'node:util';
 import { CITIES } from './cities.js';
 import { buildGroupMap, groupOf } from './groups.js';
 import { buildCompare } from './compare.js';
-import { writeChanges } from './changes.js';
+import { isOut, writeChanges } from './changes.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -31,12 +31,43 @@ const PROBE_CATEGORY = '/catalog/285-bakaliya';
 const MAX_PROBE_STORES = 12;
 // Скільки днів показувати зниклий товар як «немає в наявності», перш ніж прибрати з каталогу.
 const OUT_KEEP_DAYS = 30;
+// Скільки сторінок товарів «немає в наявності» перевіряти в місті за один збір.
+const OUT_CHECK_LIMIT = 60;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Дата за київським часом, щоб нічний запуск не «переїжджав» на інший день.
 const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Kyiv' }).format(new Date());
 const daysBetween = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 86400000);
+
+// ---------- Історія цін ----------
+const sameEntry = (a, b) =>
+  !!a && isOut(a) === isOut(b) && (b[1] == null || (a[1] === b[1] && (a[2] ?? null) === (b[2] ?? null)));
+// Записує сьогоднішній стан, якщо він відрізняється від попереднього. Повторний збір того ж дня
+// замінює сьогоднішній запис і не дублює вчорашній. Повертає true, якщо історія змінилась.
+function record(hist, entry) {
+  if (sameEntry(hist.at(-1), entry)) return false;
+  if (hist.at(-1)?.[0] === today) hist.pop();
+  if (sameEntry(hist.at(-1), entry)) return true;
+  // «Немає в наявності» без ціни для товару, якого раніше не було, не записуємо.
+  if (hist.length || entry[1] != null) hist.push(entry);
+  return true;
+}
+// З якої дати товару немає в наявності (початок останньої серії out-записів).
+function outSince(hist) {
+  let i = hist.length - 1;
+  while (i > 0 && isOut(hist[i - 1])) i--;
+  return hist[i][0];
+}
+// Поля для карток: коли востаннє змінилась ціна, якою була до того,
+// і звичайна ціна перед поточною акцією (щоб виявляти завищену «ціну до знижки»).
+function derive(p, hist) {
+  const prev = hist.slice(0, -1).findLast((h) => h[1] != null);
+  p.changed = hist.at(-1)[0];
+  p.prev = prev ? prev[1] : null;
+  const regular = p.oldPrice ? hist.findLast((h) => h[1] != null && h[2] == null) : null;
+  p.regular = regular ? regular[1] : null;
+}
 
 const args = process.argv.slice(2);
 const argValue = (name) => {
@@ -158,18 +189,7 @@ function parseCards(html) {
     const link = card.find('.catalog-item__title a');
     const price = num(card.find('.product-price__top').attr('value'));
     if (!id || !price) return;
-    // Мітки товару: знижка («-20% до 27.10») і рекламні кампанії («DC» з підказкою «Безмежний всесвіт DC»).
-    const labels = card
-      .find('.catalog-item__labels > .custom-product-label')
-      .map((_, l) => {
-        const el = $(l);
-        const text = el.text().trim().replace(/\s+/g, ' ');
-        const hint = (el.attr('data-tippy-content') || '').trim();
-        // Підказку до знижки («Акційна пропозиція!…») не зберігаємо — вона однакова в усіх.
-        return hint && !/^Акційна пропозиція/.test(hint) ? { text, hint } : { text };
-      })
-      .get()
-      .filter((l) => l.text);
+    const labels = parseLabels($, card.find('.catalog-item__labels > .custom-product-label'));
     items.push({
       id: Number(id),
       name: link.text().trim().replace(/\s+/g, ' '),
@@ -185,6 +205,30 @@ function parseCards(html) {
   });
   // Магазин, для якого сайт віддав сторінку, — щоб переконатися, що cookie спрацювала.
   return { items, store: Number($('[data-load-more]').attr('data-store')) || null };
+}
+
+// Мітки товару: знижка («-20% до 27.10») і рекламні кампанії («DC» з підказкою «Безмежний всесвіт DC»).
+function parseLabels($, els) {
+  return els
+    .map((_, l) => {
+      const el = $(l);
+      const text = el.text().trim().replace(/\s+/g, ' ');
+      const hint = (el.attr('data-tippy-content') || '').trim();
+      // Підказку до знижки («Акційна пропозиція!…») не зберігаємо — вона однакова в усіх.
+      return hint && !/^Акційна пропозиція/.test(hint) ? { text, hint } : { text };
+    })
+    .get()
+    .filter((l) => l.text);
+}
+
+// Сторінка товару показує ціну магазину (з cookie) навіть тоді, коли товару немає в наявності.
+async function productPage(href, storeId) {
+  const $ = cheerio.load(await storePage(href, storeId));
+  const box = $('.product-about__price').first();
+  const read = (sel) => num(box.find(sel).children('span').first().text().trim());
+  const price = read('.product-price__top');
+  if (!price) return null;
+  return { price, oldPrice: read('.product-price__bottom'), labels: parseLabels($, $('.product-about__labels').first().find('.custom-product-label')) };
 }
 
 async function scrapeCategory(href, storeId, products) {
@@ -216,65 +260,91 @@ async function scrapeCity(city, store, categories, groupMap) {
   const fullScrape = products.size >= meta.productCount * 0.9;
   if (!fullScrape) console.warn(`[${city.name}] увага: зібрано ${products.size} проти ${meta.productCount} минулого разу`);
 
-  // Історія: [дата, ціна, стара_ціна] лише при зміні; [дата, null] — товар зник з каталогу.
+  // Історія — лише зміни:
+  //   [дата, ціна] або [дата, ціна, стара_ціна] — у наявності;
+  //   [дата, ціна, стара_ціна | null, 1]        — немає в наявності, ціну взято зі сторінки товару;
+  //   [дата, null]                               — немає в наявності, ціна невідома.
   await fs.mkdir(historyDir, { recursive: true });
   const shards = [];
   for (let i = 0; i < SHARDS; i++) {
     shards.push(await readJson(path.join(historyDir, `${String(i).padStart(2, '0')}.json`), {}));
   }
+  // Учорашній каталог: звідти назви, посилання й останній стан товарів, яких сьогодні немає.
+  const oldList = await readJson(path.join(dir, 'products.json'), []);
+  const known = new Map(oldList.map((p) => [p.id, p]));
+
   let changed = 0;
-  const same = (h, p) => h && h[1] === p.price && (h[2] ?? null) === p.oldPrice;
   for (const p of products.values()) {
     p.group = groupOf(p.category, groupMap);
     const hist = (shards[p.id % SHARDS][p.id] ||= []);
-    if (!same(hist.at(-1), p)) {
-      // Повторний збір того ж дня замінює сьогоднішній запис (і не дублює вчорашню ціну).
-      if (hist.at(-1)?.[0] === today) hist.pop();
-      if (!same(hist.at(-1), p)) hist.push(p.oldPrice ? [today, p.price, p.oldPrice] : [today, p.price]);
-      changed++;
-    }
-    // Для карток: коли востаннє змінилась ціна і якою була до того.
-    const prev = hist.slice(0, -1).findLast((h) => h[1] != null);
-    p.changed = hist.at(-1)[0];
-    p.prev = prev ? prev[1] : null;
-    // Звичайна ціна перед поточною акцією — щоб виявляти завищену «ціну до знижки».
-    const regular = p.oldPrice ? hist.findLast((h) => h[1] != null && h[2] == null) : null;
-    p.regular = regular ? regular[1] : null;
+    if (record(hist, p.oldPrice ? [today, p.price, p.oldPrice] : [today, p.price])) changed++;
+    derive(p, hist);
   }
+
+  const out = [];
+  let checked = 0;
   if (fullScrape) {
+    // Товари, яких сьогодні немає: якщо зникли недавно — лишаються в каталозі з позначкою out.
+    const missing = [];
     for (const shard of shards) {
-      for (const [id, hist] of Object.entries(shard)) {
-        if (products.has(Number(id)) || hist.at(-1)[1] === null) continue;
-        // Повторний збір того ж дня: товар, що зранку повернувся, а тепер знову зник, — просто відкочуємо запис.
-        if (hist.at(-1)[0] === today) hist.pop();
-        if (hist.length && hist.at(-1)[1] !== null) hist.push([today, null]);
-        else if (!hist.length) delete shard[id];
+      for (const [key, hist] of Object.entries(shard)) {
+        const id = Number(key);
+        if (products.has(id)) continue;
+        const since = isOut(hist.at(-1)) ? outSince(hist) : today;
+        if (daysBetween(since, today) > OUT_KEEP_DAYS) continue;
+        missing.push({ id, hist, shard, base: known.get(id) });
       }
     }
+    // Ціну перевіряємо на сторінці товару: спершу щойно зниклі, далі ті, що найдовше не перевірялись.
+    const queue = missing
+      .filter((m) => m.base?.url)
+      .sort((a, b) => (a.base.checked || '').localeCompare(b.base.checked || ''))
+      .slice(0, OUT_CHECK_LIMIT);
+    const pages = new Map();
+    for (const m of queue) {
+      try {
+        const page = await productPage(m.base.url, store.id);
+        if (page) pages.set(m.id, page);
+      } catch (err) {
+        console.warn(`[${city.name}] сторінка товару ${m.id}: ${err.message}`);
+      }
+      checked++;
+      await sleep(DELAY_MS);
+    }
+    for (const { id, hist, shard, base } of missing) {
+      const page = pages.get(id);
+      if (page && record(hist, [today, page.price, page.oldPrice, 1])) changed++;
+      if (!page) record(hist, [today, null]);
+      if (!hist.length) {
+        delete shard[id]; // з'явився й зник того самого дня
+        continue;
+      }
+      if (!base) continue;
+      const item = { ...base, out: outSince(hist) };
+      if (page) {
+        // Мітки акції беремо зі сторінки, лише якщо ціна змінилась — у каталозі вони детальніші («-20% до 27.10»).
+        const moved = page.price !== base.price || page.oldPrice !== (base.oldPrice ?? null);
+        Object.assign(item, { price: page.price, oldPrice: page.oldPrice, checked: today }, moved ? { labels: page.labels } : {});
+      }
+      derive(item, hist);
+      out.push(item);
+    }
+  } else {
+    // Неповний збір: зниклими нікого не позначаємо, а вчорашні «немає в наявності» лишаємо як були.
+    out.push(...oldList.filter((p) => p.out && !products.has(p.id)));
   }
   for (let i = 0; i < SHARDS; i++) {
     await fs.writeFile(path.join(historyDir, `${String(i).padStart(2, '0')}.json`), JSON.stringify(shards[i]));
   }
-  const oldList = await readJson(path.join(dir, 'products.json'), []);
   await writeChanges(dir, shards, products, today, oldList);
 
-  // Зниклі товари лишаємо в каталозі як «немає в наявності» ще OUT_KEEP_DAYS днів —
-  // в останньому відомому стані (ціна, акція, мітки), лише з позначкою out (дата зникнення).
-  const known = new Map(oldList.map((p) => [p.id, p]));
-  const out = [];
-  for (const shard of shards) {
-    for (const [key, hist] of Object.entries(shard)) {
-      const id = Number(key);
-      const [since, price] = hist.at(-1);
-      if (products.has(id) || price !== null || !known.has(id) || daysBetween(since, today) > OUT_KEEP_DAYS) continue;
-      out.push({ ...known.get(id), out: since });
-    }
-  }
   const list = [...products.values(), ...out].sort((a, b) => a.name.localeCompare(b.name, 'uk'));
   await fs.writeFile(path.join(dir, 'products.json'), JSON.stringify(list));
   const cityMeta = { updated: today, updatedAt: new Date().toISOString(), productCount: products.size, outCount: out.length, store };
   await fs.writeFile(path.join(dir, 'meta.json'), JSON.stringify(cityMeta, null, 2));
-  console.log(`[${city.name}] ${products.size} товарів (+${out.length} немає в наявності), змін цін: ${changed}, ${Math.round((Date.now() - started) / 1000)} с`);
+  console.log(
+    `[${city.name}] ${products.size} товарів (+${out.length} немає в наявності, перевірено ${checked}), змін цін: ${changed}, ${Math.round((Date.now() - started) / 1000)} с`,
+  );
   return cityMeta;
 }
 

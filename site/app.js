@@ -921,13 +921,14 @@ function segments(hist, days) {
   const start = Number.isFinite(days) ? end - days * DAY : -Infinity;
   const segs = [];
   let regular = null;
-  hist.forEach(([d, price, old], i) => {
+  // [дата, ціна, стара, 1] — ціна, поки товару немає в наявності; [дата, null] — ціна невідома (розрив).
+  hist.forEach(([d, price, old, out], i) => {
     const from = parseDate(d);
     const to = i + 1 < hist.length ? parseDate(hist[i + 1][0]) : end;
     if (price != null && !old) regular = price;
     if (price == null || to <= start) return;
     const ref = old ? regular : null;
-    segs.push({ from: Math.max(from, start), to, price, old: old ?? null, ref, inflated: isInflated(old, ref) });
+    segs.push({ from: Math.max(from, start), to, price, old: old ?? null, ref, inflated: isInflated(old, ref), out: out === 1 });
   });
   return segs;
 }
@@ -979,15 +980,24 @@ function renderChart(el, hist, days, unit) {
 
   // Ступінчаста лінія; розрив, якщо товар зникав з каталогу.
   let path = '';
+  let outPath = ''; // пунктир: ціна, поки товару немає в наявності
   let area = '';
   let bands = '';
   let oldPath = ''; // «ціна до знижки» під час акцій
   let inflPath = ''; // те саме, коли її завищено
   let refPath = ''; // фактична звичайна ціна перед завищеною акцією
   segs.forEach((s, i) => {
-    const contiguous = i > 0 && segs[i - 1].to === s.from;
-    path += `${contiguous ? '' : `M${X(s.from)},`}${contiguous ? 'V' : ''}${Y(s.price)}H${X(s.to)}`;
-    area += `M${X(s.from)},${Y(lo)}V${Y(s.price)}H${X(s.to)}V${Y(lo)}Z`;
+    const p = segs[i - 1];
+    if (s.out) {
+      // Пунктир від рівня попередньої ціни, щоб лінія не рвалась.
+      const joined = p && p.to === s.from;
+      outPath += `M${X(s.from)},${Y(joined ? p.price : s.price)}${joined ? `V${Y(s.price)}` : ''}H${X(s.to)}`;
+    } else {
+      const joined = p && p.to === s.from;
+      if (joined && !p.out) path += `V${Y(s.price)}H${X(s.to)}`;
+      else path += `M${X(s.from)},${Y(joined ? p.price : s.price)}${joined ? `V${Y(s.price)}` : ''}H${X(s.to)}`;
+      area += `M${X(s.from)},${Y(lo)}V${Y(s.price)}H${X(s.to)}V${Y(lo)}Z`;
+    }
     if (!s.old) return;
     bands += `<rect class="sale-band" x="${X(s.from)}" y="${m.t}" width="${X(s.to) - X(s.from)}" height="${H - m.t - m.b}"/>`;
     if (s.inflated) {
@@ -1010,6 +1020,7 @@ function renderChart(el, hist, days, unit) {
       ${bands}
       <path class="area" d="${area}"/>
       <path class="line" d="${path}"/>
+      <path class="line line--out" d="${outPath}"/>
       <path class="old-line" d="${oldPath}"/>
       <path class="ref-line" d="${refPath}"/>
       <path class="old-line old-line--inflated" d="${inflPath}"/>
@@ -1020,6 +1031,7 @@ function renderChart(el, hist, days, unit) {
     <div class="tip" hidden></div>
     <div class="legend">
       <span><i style="background:var(--chart-line)"></i>Ціна, грн/${esc(unit)}</span>
+      ${outPath ? `<span>${swatch('line line--out')}Немає в наявності</span>` : ''}
       ${hasSale ? '<span><i style="background:var(--sale);opacity:.25"></i>Акція</span>' : ''}
       ${oldPath ? `<span>${swatch('old-line')}Ціна до знижки</span>` : ''}
       ${hasInflated ? `<span>${swatch('old-line old-line--inflated')}⚠ Завищена ціна до знижки</span><span>${swatch('ref-line')}Ціна перед акцією</span>` : ''}
@@ -1051,6 +1063,7 @@ function renderChart(el, hist, days, unit) {
     dot.setAttribute('visibility', 'visible');
     let html = `${fmtDate(day)}<br><b>${fmtPrice(s.price)} грн</b>`;
     if (s.old) html += ` <span class="old">${fmtPrice(s.old)}</span> акція −${pct(s.price, s.old)}%`;
+    if (s.out) html += '<br><span class="note">Немає в наявності</span>';
     if (s.inflated) {
       html += `<br><span class="warn">⚠ Перед акцією було ${fmtPrice(s.ref)} грн</span><br>${realDiscount(s.price, s.ref)}`;
     }
@@ -1083,7 +1096,10 @@ function renderStats(el, hist, days, unit) {
   const rows = hist
     .slice()
     .reverse()
-    .map(([d, p, o]) => `<tr><td>${fmtDate(parseDate(d))}</td><td>${p == null ? 'немає в каталозі' : fmtPrice(p)}</td><td>${o ? fmtPrice(o) : ''}</td></tr>`)
+    .map(
+      ([d, p, o, out]) =>
+        `<tr><td>${fmtDate(parseDate(d))}</td><td>${p == null ? 'немає в наявності' : `${fmtPrice(p)}${out === 1 ? ' <span class="note">(немає в наявності)</span>' : ''}`}</td><td>${o ? fmtPrice(o) : ''}</td></tr>`,
+    )
     .join('');
   el.innerHTML = `<div class="stats">
       <div class="stat"><div class="stat__k">Мінімум</div><div class="stat__v">${fmtPrice(min)} грн</div></div>

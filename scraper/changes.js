@@ -7,6 +7,9 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+// Запис історії «немає в наявності»: [дата, null] або [дата, ціна, стара_ціна, 1].
+export const isOut = (h) => h[1] == null || h[3] === 1;
+
 const readJson = async (file, fallback) => {
   try {
     return JSON.parse(await fs.readFile(file, 'utf8'));
@@ -32,12 +35,18 @@ export async function writeChanges(dir, shards, products, today, oldList) {
       if (last[0] !== today) continue;
       const before = hist.at(-2);
       const id = Number(key);
-      if (last[1] == null) {
-        const p = known.get(id);
-        if (before && p) changes.removed.push({ id, name: p.name, img: p.img, unit: p.unit, price: before[1] });
+      if (isOut(last)) {
+        if (!before) continue;
+        if (!isOut(before)) {
+          const p = known.get(id);
+          if (p) changes.removed.push({ id, name: p.name, img: p.img, unit: p.unit, price: before[1] });
+        } else if (last[1] != null && before[1] != null) {
+          // Ціна змінилась, поки товару немає в наявності (дізнались зі сторінки товару).
+          changes.prices.push({ id, from: before[1], fromOld: before[2] ?? null, to: last[1], toOld: last[2] ?? null });
+        }
       } else if (!before) {
         if (!firstDay && products.has(id)) changes.added.push(id);
-      } else if (before[1] == null) {
+      } else if (isOut(before)) {
         if (products.has(id)) changes.back.push(id);
       } else {
         changes.prices.push({ id, from: before[1], fromOld: before[2] ?? null, to: last[1], toOld: last[2] ?? null });

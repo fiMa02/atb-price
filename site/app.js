@@ -815,9 +815,10 @@ function renderList() {
     count += ` · з ціною за 1 ${perUnitSort}: ${n.toLocaleString('uk')}`;
   }
   app.innerHTML = `${filters.q ? '' : todayBanner()}${groupsRow}<p class="count">${count}</p>
-    <div class="grid">${list.slice(0, state.shown).map((p) => card(p)).join('')}</div>
+    <div class="grid" id="grid">${list.slice(0, state.shown).map((p) => card(p)).join('')}</div>
     ${list.length > state.shown ? '<button class="more" id="more">Показати ще</button>' : ''}`;
   initGroupsRow(scrollLeft);
+  placeAds($('#grid'));
   const more = $('#more');
   if (more) {
     more.onclick = () => {
@@ -834,6 +835,41 @@ function renderList() {
       }
     }, { rootMargin: '600px' }).observe(more);
   }
+}
+
+// ---------- Реклама (тестова плитка) ----------
+// Плитка розміром з картку товару, лише в загальному списку (не в «Обраному», «Що змінилося» і на сторінці товару).
+// Ставимо на початок ряду: перша — після ADS.firstRows рядів, далі — кожні ADS.everyRows рядів.
+const ADS = { firstRows: 3, everyRows: 5 };
+
+const adTile = () => `<aside class="card ad" aria-label="Реклама">
+    <span class="ad__mark">Реклама</span>
+    <div class="ad__media"><span aria-hidden="true">📣</span></div>
+    <div class="card__body">
+      <div class="ad__title">Тут може бути ваша реклама</div>
+      <div class="note">Тестовий рекламний блок PriceTrail</div>
+      <span class="ad__btn">Дізнатися більше</span>
+    </div>
+  </aside>`;
+
+function placeAds(grid) {
+  if (!grid) return;
+  let cols = 0;
+  const place = () => {
+    if (!grid.isConnected) return ro.disconnect(); // список перемальовано — ця сітка вже не потрібна
+    const n = getComputedStyle(grid).gridTemplateColumns.split(' ').length;
+    if (n === cols) return;
+    cols = n;
+    for (const el of grid.querySelectorAll('.ad')) el.remove();
+    const cards = [...grid.children];
+    // Індекси (у підсумковій послідовності плиток), на яких стоять рекламні плитки.
+    for (let row = ADS.firstRows, k = 0; row * cols - k < cards.length; row += ADS.everyRows, k++) {
+      cards[row * cols - k].insertAdjacentHTML('beforebegin', adTile());
+    }
+  };
+  const ro = new ResizeObserver(place);
+  place();
+  ro.observe(grid);
 }
 
 // ---------- Сторінка товару ----------

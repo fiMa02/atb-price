@@ -301,6 +301,26 @@ select {
   .card:hover .fav-btn, .card .fav-btn:focus-visible { opacity: 1; }
 }
 .card--missing { opacity: .6; }
+/* Рекламна плитка — розміром з картку товару, з чіткою позначкою «Реклама» */
+.ad { position: relative; border: 1px dashed var(--line); box-shadow: none; }
+@media (hover: hover) { .card.ad:hover { transform: none; box-shadow: none; } }
+.ad__mark {
+  position: absolute; top: 12px; left: 12px; z-index: 1;
+  background: var(--surface); color: var(--muted); border: 1px solid var(--line);
+  border-radius: 999px; padding: 2px 8px; font-size: 11px; font-weight: 600; letter-spacing: .02em;
+}
+.ad__media {
+  margin: 6px 6px 0; border-radius: calc(var(--r-lg) - 6px); aspect-ratio: 1;
+  display: grid; place-items: center; font-size: 56px;
+  background: linear-gradient(135deg, var(--accent-soft), var(--surface-2));
+}
+.ad__title { font-weight: 700; line-height: 1.3; }
+.ad__btn {
+  margin-top: auto; align-self: flex-start;
+  background: var(--accent); color: var(--accent-ink); border-radius: 999px;
+  padding: 7px 14px; font-size: 13px; font-weight: 600;
+}
+
 /* Ціна при оплаті карткою АТБ */
 .atbcard {
   display: inline-flex; align-items: center; gap: 5px; width: fit-content;

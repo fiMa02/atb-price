@@ -775,7 +775,8 @@ function renderToday(tab) {
         </div>`
       : card(
           r.p,
-          r.c && r.c.to !== r.c.from ? r.c.from : undefined,
+          // У «Нові акції» стара ціна вже видна закресленою — позначка «було» там зайва.
+          r.c && r.c.to !== r.c.from && cur[0] !== 'sale' ? r.c.from : undefined,
           r.kind === 'saleEnd' && cur[0] === 'saleEnd'
             ? `<span class="tag tag--warn" title="Акційна ціна була ${fmtPrice(r.c.from)} грн замість ${fmtPrice(r.c.fromOld)} грн${r.c.to === r.c.from ? '; після акції ціна не змінилась' : ''}">⌛ ${
                 r.c.to === r.c.from ? `акція −${pct(r.c.from, r.c.fromOld)}% скінчилась` : `була акція −${pct(r.c.from, r.c.fromOld)}%`

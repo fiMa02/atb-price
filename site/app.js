@@ -28,9 +28,6 @@ const unmix = (w) => {
 const norm = (s) => s.toLowerCase().replace(/ё/g, 'е').replace(/[’'`ʼ]/g, '').replace(/[^\s]+/g, unmix);
 const discount = (p) => (p.oldPrice ? 1 - p.price / p.oldPrice : 0);
 const inflation = (p) => (isInflated(p.oldPrice, p.regular) ? p.oldPrice / p.regular - 1 : 0);
-// Реальна знижка: від меншої з цін — «до знижки» чи тієї, що була перед акцією.
-// Без акції — 0; якщо «акційна» ціна не нижча за звичайну — від'ємна.
-const realSaving = (p) => (p.oldPrice ? 1 - p.price / Math.min(p.oldPrice, p.regular || p.oldPrice) : 0);
 
 // ---------- Ціна за кг / л / шт ----------
 // Кількість беремо з назви: «0,5 кг», «170мл», «4х115 г», «(76 ф/п х 2г)», «200+100 мл», «30 шт».
@@ -494,16 +491,19 @@ function bindFavTarget(p) {
 
 // ---------- Фільтри ----------
 
-const filters = { q: '', group: '', cat: '', sort: 'name', sale: false, card: false };
+const filters = { q: '', group: '', cat: '', sort: 'name', sale: false, card: false, inflated: false };
 try {
   Object.assign(filters, JSON.parse(sessionStorage.getItem('filters') || '{}'));
 } catch {}
-// Параметри з адреси (?sort=inflated&q=молоко&sale=1) мають пріоритет — щоб можна було ділитися посиланнями.
+// Параметри з адреси (?q=молоко&sale=1&inflated=1) мають пріоритет — щоб можна було ділитися посиланнями.
 for (const [k, v] of new URLSearchParams(location.search)) {
-  if (k === 'sale' || k === 'card') filters[k] = v === '1';
+  if (k === 'sale' || k === 'card' || k === 'inflated') filters[k] = v === '1';
   else if (k in filters) filters[k] = v;
 }
 if (filters.sort === 'per-asc') filters.sort = 'per-kg'; // колишнє «Дешевші за кг/л»
+// Колишні сортування «Спершу завищені/реальні акції»: завищені тепер — фільтр.
+if (filters.sort === 'inflated') filters.inflated = true;
+if (filters.sort === 'inflated' || filters.sort === 'real') filters.sort = 'discount';
 
 function applyFilters() {
   try {
@@ -520,6 +520,7 @@ function bindFilters() {
   $('#sort').value = filters.sort;
   $('#sale').checked = filters.sale;
   $('#card').checked = filters.card;
+  $('#inflated').checked = filters.inflated;
   let t;
   const update = () => {
     filters.q = $('#q').value;
@@ -527,6 +528,7 @@ function bindFilters() {
     filters.sort = $('#sort').value;
     filters.sale = $('#sale').checked;
     filters.card = $('#card').checked;
+    filters.inflated = $('#inflated').checked;
     applyFilters();
   };
   // Серце на картці (вона — посилання, тож не даємо перейти) і кнопка на сторінці товару.
@@ -564,7 +566,7 @@ function bindFilters() {
     clearTimeout(t);
     t = setTimeout(update, 150);
   });
-  for (const id of ['#cat', '#sort', '#sale', '#card']) $(id).addEventListener('change', update);
+  for (const id of ['#cat', '#sort', '#sale', '#card', '#inflated']) $(id).addEventListener('change', update);
 }
 
 // Ціна за 1 кг / л / шт (вагові товари — за їхньою ціною); null, якщо для цієї одиниці невідома.
@@ -585,16 +587,13 @@ function filtered() {
       (!filters.cat || p.category === filters.cat) &&
       (!filters.sale || p.oldPrice) &&
       (!filters.card || p.cardPrice) &&
+      (!filters.inflated || inflation(p) > 0) &&
       words.every((w) => p._q.includes(w)),
   );
   const sorters = {
     'price-asc': (a, b) => a.price - b.price,
     'price-desc': (a, b) => b.price - a.price,
     discount: (a, b) => discount(b) - discount(a),
-    // На скільки «ціна до знижки» вища за звичайну ціну перед акцією; незавищені — після, за назвою.
-    inflated: (a, b) => inflation(b) - inflation(a),
-    // Акції з найбільшою реальною знижкою; далі товари без акції, наприкінці — фіктивні акції.
-    real: (a, b) => realSaving(b) - realSaving(a),
     changed: (a, b) => (b.changed || '').localeCompare(a.changed || ''),
     ...Object.fromEntries(Object.entries(PER_SORT).map(([k, u]) => [k, perSorter(u)])),
   };
@@ -799,19 +798,12 @@ function renderList() {
     <button class="gscroll gscroll--right" data-dir="1" aria-label="Прокрутити розділи праворуч">›</button>
   </div>`;
   if (!list.length) {
-    app.innerHTML = `${groupsRow}<div class="empty"><b>🔍</b>Нічого не знайдено<br><span class="note">Спробуйте іншу назву або приберіть фільтри</span></div>`;
+    const why = filters.inflated ? 'Акцій із завищеною «ціною до знижки» тут поки не виявлено' : 'Спробуйте іншу назву або приберіть фільтри';
+    app.innerHTML = `${groupsRow}<div class="empty"><b>🔍</b>Нічого не знайдено<br><span class="note">${why}</span></div>`;
     initGroupsRow(scrollLeft);
     return;
   }
   let count = `Знайдено: ${list.length.toLocaleString('uk')}`;
-  if (filters.sort === 'inflated') {
-    const n = list.filter((p) => inflation(p) > 0).length;
-    count += n ? ` · із завищеною «ціною до знижки»: ${n}` : ' · акцій із завищеною «ціною до знижки» поки не виявлено';
-  }
-  if (filters.sort === 'real') {
-    const n = list.filter((p) => realSaving(p) > 0.005).length;
-    count += ` · реальних акцій: ${n.toLocaleString('uk')}`;
-  }
   const perUnitSort = PER_SORT[filters.sort];
   if (perUnitSort) {
     const n = list.filter((p) => perIn(p, perUnitSort) != null).length;

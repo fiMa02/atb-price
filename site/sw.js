@@ -1,5 +1,5 @@
 // Оболонка сайту — з кешу; дані — спершу з мережі (щоб ціни були свіжими), з кешу лише офлайн.
-const CACHE = 'pricetrail-v32';
+const CACHE = 'pricetrail-v33';
 // Обране (копія з localStorage сторінки) і вже надіслані сповіщення — не видаляються при оновленні.
 const STATE = 'pricetrail-state';
 const SHELL = ['./', 'index.html', 'style.css', 'app.js', 'icon.svg', 'manifest.webmanifest'];

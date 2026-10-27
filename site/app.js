@@ -1001,13 +1001,14 @@ const LABEL_SIDE = {
   kremenchuk: 'above',
   cherkasy: 'left',
   kropyvnytskyi: 'left',
-  lutsk: 'above',
+  lutsk: 'left',
   rivne: 'above',
   ternopil: 'left',
   'ivano-frankivsk': 'below',
   chernivtsi: 'below',
   uzhhorod: 'below',
   lviv: 'left',
+  khmelnytskyi: 'below',
 };
 const LABEL_AT = { right: [15, -2, 'start'], left: [-15, -2, 'end'], above: [0, -28, 'middle'], below: [0, 26, 'middle'] };
 
@@ -1070,6 +1071,11 @@ async function renderCompare(el, p) {
       ${diff(r)}
     </button>`;
 
+  // Відсоток до ціни у вибраному місті поруч із ціною на мапі (для самого міста і «так само» — без нього).
+  const pctLabel = (r) => {
+    const d = diffOf(r);
+    return d?.cls ? `<tspan class="mcity__pct mcity__pct--${d.cls}" dx="5">${d.text}</tspan>` : '';
+  };
   let mapHtml = '';
   if (map) {
     const byCity = new Map(rows.map((r) => [r.c, r]));
@@ -1084,7 +1090,7 @@ async function renderCompare(el, p) {
         if (r === here) [tx, ty] = [tx * 1.5, ty * 1.25]; // підпис не налазить на кільце «ваше місто»
         return `<g class="mcity${r === here ? ' is-here' : ''}" data-city="${c.slug}" ${at} style="--tone:${tone(r.price)}">
             ${r === here ? '<circle class="mcity__ring" r="15"/>' : ''}<circle class="mcity__dot" r="9"/>
-            <text class="mcity__label" x="${tx}" y="${ty}" text-anchor="${anchor}"><tspan class="mcity__name" x="${tx}">${esc(c.name)}</tspan><tspan class="mcity__price" x="${tx}" dy="17">${fmtPrice(r.price)}</tspan></text>
+            <text class="mcity__label" x="${tx}" y="${ty}" text-anchor="${anchor}"><tspan class="mcity__name" x="${tx}">${esc(c.name)}</tspan><tspan class="mcity__price" x="${tx}" dy="17">${fmtPrice(r.price)}</tspan>${pctLabel(r)}</text>
           </g>`;
       })
       .join('');

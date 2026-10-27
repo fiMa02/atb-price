@@ -509,7 +509,8 @@ function filtered() {
 // ---------- Список ----------
 
 // from — попередня ціна, яку показуємо поруч («↓ було 34,90»): на сторінках «Обране» і «Що змінилося».
-function card(p, from) {
+// extra — додаткова позначка (HTML) на початку рядка позначок.
+function card(p, from, extra = '') {
   const sale = p.oldPrice ? `<span class="badge">−${Math.round(discount(p) * 100)}%</span>` : '';
   let flags = p.out ? `<span class="tag tag--out" title="Остання відома ціна — ${fmtPrice(p.price)} грн">Немає в наявності з ${fmtDate(parseDate(p.out), false)}</span>` : '';
   if (isInflated(p.oldPrice, p.regular)) {
@@ -536,7 +537,7 @@ function card(p, from) {
         ${p.oldPrice ? `<span class="old">${fmtPrice(p.oldPrice)}</span>` : ''}
         ${perHtml(p)}
       </div>
-      <div class="card__flags">${flags}</div>
+      <div class="card__flags">${extra}${flags}</div>
     </div>
   </a>`;
 }
@@ -619,6 +620,8 @@ function todayData() {
     ['down', '↓ Подешевшало', rows.filter((r) => r.c.to < r.c.from).sort((a, b) => pctChange(a.c) - pctChange(b.c))],
     ['up', '↑ Подорожчало', rows.filter((r) => r.c.to > r.c.from).sort((a, b) => pctChange(b.c) - pctChange(a.c))],
     ['sale', '% Нові акції', rows.filter((r) => r.kind === 'sale').sort((a, b) => discount(b.p) - discount(a.p))],
+    // Від найбільшої колишньої знижки.
+    ['saleEnd', '⌛ Акція закінчилась', rows.filter((r) => r.kind === 'saleEnd').sort((a, b) => a.c.from / a.c.fromOld - b.c.from / b.c.fromOld)],
     ['new', '✦ Нові товари', ch.added.map((id) => ({ p: state.byId.get(id) })).filter((r) => r.p)],
     ['back', '↺ Знову в наявності', (ch.back || []).map((id) => ({ p: state.byId.get(id) })).filter((r) => r.p)],
     // Зниклі лишаються в каталозі з позначкою out — тоді картку можна відкрити.
@@ -635,6 +638,7 @@ function todayBanner() {
     n('down') && `<span class="tb__down">↓ ${n('down')}</span>`,
     n('up') && `<span class="tb__up">↑ ${n('up')}</span>`,
     n('sale') && `<span>% ${n('sale')} нових акцій</span>`,
+    n('saleEnd') && `<span>⌛ ${n('saleEnd')} акцій закінчилось</span>`,
     n('new') && `<span>✦ ${n('new')} нових товарів</span>`,
     n('back') && `<span>↺ ${n('back')} знову в наявності</span>`,
   ].filter(Boolean);
@@ -671,7 +675,15 @@ function renderToday(tab) {
             <div class="card__price"><span class="price">${fmtPrice(r.gone.price)} <small>₴/${esc(r.gone.unit)}</small></span></div>
             <div class="note">Немає в наявності</div></div>
         </div>`
-      : card(r.p, r.c && r.c.to !== r.c.from ? r.c.from : undefined);
+      : card(
+          r.p,
+          r.c && r.c.to !== r.c.from ? r.c.from : undefined,
+          r.kind === 'saleEnd' && cur[0] === 'saleEnd'
+            ? `<span class="tag tag--warn" title="Акційна ціна була ${fmtPrice(r.c.from)} грн замість ${fmtPrice(r.c.fromOld)} грн${r.c.to === r.c.from ? '; після акції ціна не змінилась' : ''}">⌛ ${
+                r.c.to === r.c.from ? `акція −${pct(r.c.from, r.c.fromOld)}% скінчилась` : `була акція −${pct(r.c.from, r.c.fromOld)}%`
+              }</span>`
+            : '',
+        );
   html += `<div class="grid">${cur[2].map(tile).join('')}</div>`;
   app.innerHTML = html;
 }

@@ -840,9 +840,10 @@ function renderList() {
 // ---------- Реклама (тестова плитка) ----------
 // Плитка розміром з картку товару, лише в загальному списку (не в «Обраному», «Що змінилося» і на сторінці товару).
 // Ставимо на початок ряду: перша — після ADS.firstRows рядів, далі — кожні ADS.everyRows рядів.
-const ADS = { firstRows: 3, everyRows: 5 };
+// На телефоні (≤ ADS.wideCols колонок) це банер на всю ширину, заввишки як картка товару.
+const ADS = { firstRows: 3, everyRows: 5, wideCols: 2 };
 
-const adTile = () => `<aside class="card ad" aria-label="Реклама">
+const adTile = (wide) => `<aside class="card ad${wide ? ' ad--wide' : ''}" aria-label="Реклама">
     <span class="ad__mark">Реклама</span>
     <div class="ad__media"><span aria-hidden="true">📣</span></div>
     <div class="card__body">
@@ -855,17 +856,26 @@ const adTile = () => `<aside class="card ad" aria-label="Реклама">
 function placeAds(grid) {
   if (!grid) return;
   let cols = 0;
+  // Банер на всю ширину — заввишки як картка товару в сусідньому ряду.
+  const fitWide = () => {
+    const h = grid.querySelector('.card:not(.ad)')?.offsetHeight;
+    for (const el of grid.querySelectorAll('.ad--wide')) el.style.height = h ? `${h}px` : '';
+  };
   const place = () => {
     if (!grid.isConnected) return ro.disconnect(); // список перемальовано — ця сітка вже не потрібна
     const n = getComputedStyle(grid).gridTemplateColumns.split(' ').length;
-    if (n === cols) return;
+    if (n === cols) return fitWide();
     cols = n;
     for (const el of grid.querySelectorAll('.ad')) el.remove();
     const cards = [...grid.children];
-    // Індекси (у підсумковій послідовності плиток), на яких стоять рекламні плитки.
-    for (let row = ADS.firstRows, k = 0; row * cols - k < cards.length; row += ADS.everyRows, k++) {
-      cards[row * cols - k].insertAdjacentHTML('beforebegin', adTile());
+    const wide = cols <= ADS.wideCols;
+    // Скільки карток перед k-ю рекламою: банер займає цілий ряд, плитка — одне місце в ряду.
+    for (let row = ADS.firstRows, k = 0; ; row += ADS.everyRows, k++) {
+      const i = wide ? row * cols : row * cols - k;
+      if (i >= cards.length) break;
+      cards[i].insertAdjacentHTML('beforebegin', adTile(wide));
     }
+    fitWide();
   };
   const ro = new ResizeObserver(place);
   place();

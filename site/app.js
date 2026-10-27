@@ -120,13 +120,100 @@ async function loadCities() {
   $('#city').innerHTML = state.cities
     .map((c) => `<option value="${c.slug}"${c === state.city ? ' selected' : ''}>${esc(c.name)}</option>`)
     .join('');
+  initCityMenu();
   $('#city').addEventListener('change', async () => {
     state.city = state.cities.find((c) => c.slug === $('#city').value);
     store.set('city', state.city.slug);
+    $('#cityName').textContent = state.city.name;
     app.innerHTML = skeleton();
     await loadData();
     state.shown = PAGE;
     route();
+  });
+}
+
+// Вибір міста на комп'ютері: власне меню з пошуком (системний список з 26 міст незручний).
+// На сенсорних екранах лишається звичайний <select> — його показує CSS.
+function initCityMenu() {
+  const btn = $('#cityBtn');
+  const menu = $('#cityMenu');
+  const q = $('#cityQ');
+  const list = $('#cityList');
+  const sorted = [...state.cities].sort((a, b) => a.name.localeCompare(b.name, 'uk'));
+  let shown = [];
+  let active = 0;
+  $('#cityName').textContent = state.city.name;
+
+  const paint = () => {
+    for (const [i, el] of [...list.children].entries()) {
+      el.classList.toggle('is-active', i === active);
+      if (i === active) el.scrollIntoView({ block: 'nearest' });
+    }
+  };
+  const render = () => {
+    const words = norm(q.value).split(/\s+/).filter(Boolean);
+    shown = sorted.filter((c) => words.every((w) => norm(c.name).includes(w)));
+    active = words.length ? 0 : Math.max(0, shown.indexOf(state.city));
+    list.innerHTML = shown.length
+      ? shown
+          .map(
+            (c) => `<div class="city-opt" role="option" id="city-${c.slug}" data-slug="${c.slug}" aria-selected="${c === state.city}">
+              <b>${esc(c.name)}</b><small>${esc(c.address)}</small></div>`,
+          )
+          .join('')
+      : '<p class="note city-none">Такого міста немає</p>';
+    paint();
+  };
+  const open = () => {
+    q.value = '';
+    render();
+    menu.hidden = false;
+    btn.setAttribute('aria-expanded', 'true');
+    q.focus();
+  };
+  const close = (focusBtn) => {
+    menu.hidden = true;
+    btn.setAttribute('aria-expanded', 'false');
+    if (focusBtn) btn.focus();
+  };
+  const pick = (slug) => {
+    close(true);
+    if (slug === state.city.slug) return;
+    $('#city').value = slug;
+    $('#city').dispatchEvent(new Event('change'));
+  };
+
+  btn.onclick = () => (menu.hidden ? open() : close());
+  q.oninput = render;
+  q.onkeydown = (e) => {
+    const cols = getComputedStyle(list).gridTemplateColumns.split(' ').length;
+    const step = { ArrowDown: cols, ArrowUp: -cols, ArrowRight: 1, ArrowLeft: -1 }[e.key];
+    if (step && shown.length && (e.key.startsWith('ArrowU') || e.key.startsWith('ArrowD') || q.value === '')) {
+      e.preventDefault();
+      active = Math.min(shown.length - 1, Math.max(0, active + step));
+      paint();
+    } else if (e.key === 'Enter' && shown[active]) {
+      e.preventDefault();
+      pick(shown[active].slug);
+    } else if (e.key === 'Escape') {
+      close(true);
+    }
+  };
+  list.onclick = (e) => {
+    const opt = e.target.closest('[data-slug]');
+    if (opt) pick(opt.dataset.slug);
+  };
+  list.onpointermove = (e) => {
+    const opt = e.target.closest('[data-slug]');
+    if (!opt) return;
+    const i = shown.findIndex((c) => c.slug === opt.dataset.slug);
+    if (i !== active) {
+      active = i;
+      for (const [j, el] of [...list.children].entries()) el.classList.toggle('is-active', j === active);
+    }
+  };
+  document.addEventListener('pointerdown', (e) => {
+    if (!menu.hidden && !menu.contains(e.target) && !btn.contains(e.target)) close();
   });
 }
 

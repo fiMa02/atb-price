@@ -20,10 +20,15 @@
     <div class="wrap top__row">
       <a href="#/" class="logo"><img src="icon.svg" alt="" width="32" height="32"><span>Price<b>Trail</b></span></a>
       <div class="top__actions">
-        <label class="city-pick">
+        <div class="city-pick">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="10" r="2.5"/></svg>
           <select id="city" aria-label="Місто"></select>
-        </label>
+          <button type="button" class="city-btn" id="cityBtn" aria-haspopup="listbox" aria-expanded="false" aria-controls="cityMenu"><span id="cityName"></span><svg class="city-btn__chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+          <div class="city-menu" id="cityMenu" hidden>
+            <input type="search" id="cityQ" placeholder="Знайти місто" autocomplete="off" aria-label="Знайти місто" aria-controls="cityList">
+            <div class="city-list" id="cityList" role="listbox" aria-label="Місто"></div>
+          </div>
+        </div>
         <a href="#/fav" class="fav-link" id="favLink" aria-label="Обране"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.6-4.7-9.4-9.6C1.4 7.6 3.6 4.5 7 4.5c2 0 3.5 1.1 5 3 1.5-1.9 3-3 5-3 3.4 0 5.6 3.1 4.4 6.4-1.8 4.9-9.4 9.6-9.4 9.6Z"/></svg><span class="fav-link__n" id="favN" hidden></span></a>
       </div>
     </div>

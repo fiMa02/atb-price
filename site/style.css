@@ -114,6 +114,45 @@ svg { flex: none; }
 .city-pick svg { width: 16px; height: 16px; fill: none; stroke: var(--accent); stroke-width: 2.2; }
 .city-pick select { border: 0; background: transparent; font-weight: 600; padding: 8px 32px 8px 2px; min-width: 0; }
 
+/* Меню міст (лише на комп'ютері; на сенсорних екранах — системний список) */
+.city-pick { position: relative; }
+.city-btn, .city-menu { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  .city-pick select { display: none; }
+  .city-btn {
+    display: flex; align-items: center; gap: 6px;
+    border: 0; background: transparent; color: var(--ink); font: inherit; font-weight: 600;
+    padding: 8px 12px 8px 2px; cursor: pointer; border-radius: 999px; white-space: nowrap;
+  }
+  .city-btn:hover { border-color: transparent; }
+  .city-btn__chev { width: 16px; height: 16px; fill: none; stroke: var(--muted); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; transition: transform .15s; }
+  .city-btn[aria-expanded=true] .city-btn__chev { transform: rotate(180deg); }
+  .city-menu:not([hidden]) {
+    display: flex; flex-direction: column; gap: 8px;
+    position: absolute; z-index: 30; top: calc(100% + 8px); right: 0;
+    width: min(560px, calc(100vw - 32px)); max-height: min(70vh, 520px);
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg);
+    box-shadow: var(--shadow-hover); padding: 10px;
+  }
+  .city-menu input {
+    border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface-2);
+    padding: 10px 12px; outline: none;
+  }
+  .city-menu input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); background: var(--surface); }
+  .city-list { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; overflow-y: auto; overscroll-behavior: contain; }
+  .city-opt {
+    display: flex; flex-direction: column; gap: 1px; min-width: 0;
+    padding: 8px 10px; border-radius: var(--r-sm); cursor: pointer;
+  }
+  .city-opt b { font-weight: 600; }
+  .city-opt small { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .city-opt.is-active { background: var(--surface-2); }
+  .city-opt[aria-selected=true] { background: var(--accent-soft); }
+  .city-opt[aria-selected=true] b { color: var(--accent); }
+  .city-opt[aria-selected=true] b::after { content: ' ✓'; }
+  .city-none { grid-column: 1 / -1; padding: 8px 10px; margin: 0; }
+}
+
 select, input[type=search] { font: inherit; color: var(--ink); }
 select {
   appearance: none; -webkit-appearance: none;

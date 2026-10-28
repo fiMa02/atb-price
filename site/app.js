@@ -773,17 +773,23 @@ function todayBanner() {
   const d = todayData();
   if (!d) return '';
   const n = (k) => d.tabs.find((t) => t[0] === k)[2].length;
+  // На телефоні лишаються тільки значки з числами — підписи (tb__w) ховає CSS, повний текст у title.
+  // ↓ і ↑ зрозумілі й без підпису — їм він не потрібен навіть на комп'ютері.
+  const part = (k, icon, words, cls = '', label = true) => {
+    const v = n(k);
+    return v && `<span${cls ? ` class="${cls}"` : ''} title="${v} ${words}">${icon}${v}${label ? `<span class="tb__w"> ${words}</span>` : ''}</span>`;
+  };
   const parts = [
-    n('down') && `<span class="tb__down">↓ ${n('down')}</span>`,
-    n('up') && `<span class="tb__up">↑ ${n('up')}</span>`,
-    n('sale') && `<span>% ${n('sale')} ${plural(n('sale'), 'нова акція', 'нові акції', 'нових акцій')}</span>`,
-    n('saleEnd') && `<span>⌛ ${n('saleEnd')} ${plural(n('saleEnd'), 'акція закінчилась', 'акції закінчились', 'акцій закінчилось')}</span>`,
-    n('saleUp') && `<span class="tb__up">⇧ ${n('saleUp')} дорожче, ніж до акції</span>`,
-    n('saleKept') && `<span>＝ ${n('saleKept')} без зміни ціни після акції</span>`,
-    n('new') && `<span>✦ ${n('new')} ${plural(n('new'), 'новий товар', 'нові товари', 'нових товарів')}</span>`,
+    part('down', '↓ ', plural(n('down'), 'товар подешевшав', 'товари подешевшали', 'товарів подешевшало'), 'tb__down', false),
+    part('up', '↑ ', plural(n('up'), 'товар подорожчав', 'товари подорожчали', 'товарів подорожчало'), 'tb__up', false),
+    part('sale', '% ', plural(n('sale'), 'нова акція', 'нові акції', 'нових акцій')),
+    part('saleEnd', '⌛ ', plural(n('saleEnd'), 'акція закінчилась', 'акції закінчились', 'акцій закінчилось')),
+    part('saleUp', '⇧ ', 'дорожче, ніж до акції', 'tb__up'),
+    part('saleKept', '＝ ', 'без зміни ціни після акції'),
+    part('new', '✦ ', plural(n('new'), 'новий товар', 'нові товари', 'нових товарів')),
   ].filter(Boolean);
   if (!parts.length) return '';
-  return `<a class="today-banner" href="#/today"><b>Що змінилося ${fmtDate(parseDate(d.date), false)}</b>${parts.join('')}<span class="today-banner__go">Переглянути →</span></a>`;
+  return `<a class="today-banner" href="#/today"><b>Що змінилося ${fmtDate(parseDate(d.date), false)}</b>${parts.join('')}<span class="today-banner__go"><span class="tb__w">Переглянути </span>→</span></a>`;
 }
 
 // Сортування в «Що змінилося». Вкладки вже впорядковані від найбільшої зміни (чи знижки) —

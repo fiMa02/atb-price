@@ -479,6 +479,15 @@ select {
 .tb__down { color: var(--good); }
 .tb__up { color: var(--sale); }
 .today-banner__go { margin-left: auto; color: var(--accent); }
+.today-banner > span { white-space: nowrap; }
+/* На телефоні — компактно: заголовок і значки з числами в один-два рядки */
+@media (max-width: 520px) {
+  .today-banner { gap: 2px 10px; margin-top: 10px; padding: 8px 12px; font-size: 13px; }
+  .today-banner > * { order: 2; }
+  .today-banner b { order: 0; flex: 1 0 calc(100% - 30px); font-size: 13px; }
+  .tb__w { display: none; }
+  .today-banner .today-banner__go { order: 1; font-size: 15px; line-height: 1; }
+}
 .today-sub { margin: -4px 0 14px; }
 .today-bar { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px 12px; margin-bottom: 16px; }
 .today-tabs { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }

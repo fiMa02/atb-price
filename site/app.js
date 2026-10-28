@@ -746,6 +746,21 @@ function todayBanner() {
   return `<a class="today-banner" href="#/today"><b>Що змінилося ${fmtDate(parseDate(d.date), false)}</b>${parts.join('')}<span class="today-banner__go">Переглянути →</span></a>`;
 }
 
+// Сортування в «Що змінилося»: «За зміною» — порядок вкладки (найбільша зміна чи знижка першою).
+const TODAY_SORTS = {
+  change: ['За зміною'],
+  'price-asc': ['Спершу дешевші', (a, b) => a.price - b.price],
+  'price-desc': ['Спершу дорожчі', (a, b) => b.price - a.price],
+  'per-asc': ['Дешевші за кг/л/шт', (a, b) => (a._per?.price ?? Infinity) - (b._per?.price ?? Infinity)],
+  discount: ['Найбільша знижка', (a, b) => discount(b) - discount(a)],
+  name: ['За назвою', (a, b) => a.name.localeCompare(b.name, 'uk')],
+};
+let todaySort = 'change';
+try {
+  todaySort = sessionStorage.getItem('todaySort') || 'change';
+} catch {}
+if (!TODAY_SORTS[todaySort]) todaySort = 'change';
+
 function renderToday(tab) {
   document.querySelector('.top').classList.add('is-product');
   document.title = 'Що змінилося — PriceTrail';
@@ -764,9 +779,12 @@ function renderToday(tab) {
     app.innerHTML = `${html}<div class="empty"><b>😌</b>Ціни не змінилися<br><span class="note">Порівняно з попереднім днем — жодних змін</span></div>`;
     return;
   }
-  html += `<div class="seg today-tabs" role="tablist">${tabs
+  html += `<div class="today-bar"><div class="seg today-tabs" role="tablist">${tabs
     .map(([k, label, list]) => `<a href="#/today/${k}" role="tab" aria-selected="${k === cur[0]}">${label} <small>${list.length}</small></a>`)
-    .join('')}</div>`;
+    .join('')}</div>
+    <select id="todaySort" class="pill today-sort" aria-label="Сортування">${Object.entries(TODAY_SORTS)
+      .map(([k, [label]]) => `<option value="${k}"${k === todaySort ? ' selected' : ''}>${label}</option>`)
+      .join('')}</select></div>`;
   const tile = (r) =>
     card(
           r.p,
@@ -778,8 +796,17 @@ function renderToday(tab) {
               }</span>`
             : '',
         );
-  html += `<div class="grid">${cur[2].map(tile).join('')}</div>`;
+  const sorter = TODAY_SORTS[todaySort]?.[1];
+  const list = sorter ? [...cur[2]].sort((a, b) => sorter(a.p, b.p)) : cur[2];
+  html += `<div class="grid">${list.map(tile).join('')}</div>`;
   app.innerHTML = html;
+  $('#todaySort').onchange = (e) => {
+    todaySort = e.target.value;
+    try {
+      sessionStorage.setItem('todaySort', todaySort);
+    } catch {}
+    renderToday(cur[0]);
+  };
 }
 
 function renderList() {
@@ -903,11 +930,11 @@ async function renderProduct(id) {
   const p = state.byId.get(id);
   scrollTo(0, 0);
   if (!p) {
-    app.innerHTML = '<a class="back" href="#/">← Усі товари</a><p class="status">Товар не знайдено — можливо, його вже немає в каталозі.</p>';
+    app.innerHTML = `${backLink()}<p class="status">Товар не знайдено — можливо, його вже немає в каталозі.</p>`;
     return;
   }
   document.title = `${p.name} — PriceTrail`;
-  app.innerHTML = `<a class="back" href="#/">← Усі товари</a>
+  app.innerHTML = `${backLink()}
     <div class="product">
       <div class="product__media"><img class="product__img" src="${esc(p.img)}" alt=""></div>
       <div>
@@ -1379,13 +1406,35 @@ function renderStats(el, hist, days, unit) {
 
 // ---------- Маршрутизація ----------
 
-function route() {
+// Повернення зі сторінки товару: туди, звідки її відкрили (список, «Що змінилося», «Обране»), на те саме місце.
+const scrollMemo = new Map();
+const pageKey = (hash) => (hash || '#/').replace(/^#\/?$/, '#/');
+let backTo = '#/';
+const backLink = () => {
+  const label = backTo.startsWith('#/today') ? 'Що змінилося' : backTo === '#/fav' ? 'Обране' : 'Усі товари';
+  return `<a class="back" href="${esc(backTo)}">← ${label}</a>`;
+};
+
+function route(e) {
+  const from = e?.oldURL ? pageKey(new URL(e.oldURL).hash) : null;
+  if (from && !from.startsWith('#/p/')) {
+    scrollMemo.set(from, scrollY);
+    backTo = from;
+  }
+  // Повертаємось зі сторінки товару — відновлюємо прокрутку сторінки, куди повернулись.
+  const restore = from?.startsWith('#/p/') ? scrollMemo.get(pageKey(location.hash)) : null;
   const m = location.hash.match(/^#\/p\/(\d+)/);
   const onFavs = location.hash === '#/fav';
   if (onFavs) $('#favLink').setAttribute('aria-current', 'page');
   else $('#favLink').removeAttribute('aria-current');
   const today = location.hash.match(/^#\/today(?:\/(\w+))?/);
-  const render = () => (m ? renderProduct(Number(m[1])) : onFavs ? renderFavs() : today ? renderToday(today[1]) : renderList());
+  const render = () => {
+    if (m) renderProduct(Number(m[1]));
+    else if (onFavs) renderFavs();
+    else if (today) renderToday(today[1]);
+    else renderList();
+    if (restore != null) scrollTo(0, restore);
+  };
   if (document.startViewTransition && !matchMedia('(prefers-reduced-motion: reduce)').matches) document.startViewTransition(render);
   else render();
 }

@@ -713,6 +713,8 @@ const changeKind = (c) => (!c.fromOld && c.toOld ? 'sale' : c.fromOld && !c.toOl
 const plural = (n, one, few, many) => (n % 10 === 1 && n % 100 !== 11 ? one : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? few : many);
 const pctChange = (c) => (c.to / c.from - 1) * 100;
 
+const bySaleWas = (a, b) => a.c.from / a.c.fromOld - b.c.from / b.c.fromOld;
+
 function todayData() {
   const ch = state.changes;
   if (!ch) return null;
@@ -725,7 +727,10 @@ function todayData() {
     // Акція з'явилась або змінились її умови (інша акційна ціна) — від найбільшої знижки.
     ['sale', '% Нові акції', rows.filter((r) => r.kind === 'sale' || (r.c.fromOld && r.c.toOld)).sort((a, b) => discount(b.p) - discount(a.p))],
     // Від найбільшої колишньої знижки.
-    ['saleEnd', '⌛ Акція закінчилась', rows.filter((r) => r.kind === 'saleEnd').sort((a, b) => a.c.from / a.c.fromOld - b.c.from / b.c.fromOld)],
+    // Акція закінчилась і ціна змінилась (зазвичай повернулась до звичайної) — від найбільшої колишньої знижки.
+    ['saleEnd', '⌛ Акція закінчилась', rows.filter((r) => r.kind === 'saleEnd' && r.c.to !== r.c.from).sort(bySaleWas)],
+    // Акція «закінчилась», але ціна та сама — прибрали лише закреслену «ціну до знижки».
+    ['saleKept', '＝ Ціна після акції та сама', rows.filter((r) => r.kind === 'saleEnd' && r.c.to === r.c.from).sort(bySaleWas)],
     ['new', '✦ Нові товари', ch.added.map((id) => ({ p: state.byId.get(id) })).filter((r) => r.p)],
   ];
   return { date: ch.date, tabs };
@@ -740,6 +745,7 @@ function todayBanner() {
     n('up') && `<span class="tb__up">↑ ${n('up')}</span>`,
     n('sale') && `<span>% ${n('sale')} ${plural(n('sale'), 'нова акція', 'нові акції', 'нових акцій')}</span>`,
     n('saleEnd') && `<span>⌛ ${n('saleEnd')} ${plural(n('saleEnd'), 'акція закінчилась', 'акції закінчились', 'акцій закінчилось')}</span>`,
+    n('saleKept') && `<span>＝ ${n('saleKept')} без зміни ціни після акції</span>`,
     n('new') && `<span>✦ ${n('new')} ${plural(n('new'), 'новий товар', 'нові товари', 'нових товарів')}</span>`,
   ].filter(Boolean);
   if (!parts.length) return '';
@@ -791,7 +797,7 @@ function renderToday(tab) {
           r.p,
           // У «Нові акції» стара ціна вже видна закресленою — позначка «було» там зайва.
           r.c && r.c.to !== r.c.from && cur[0] !== 'sale' ? r.c.from : undefined,
-          r.kind === 'saleEnd' && cur[0] === 'saleEnd'
+          r.kind === 'saleEnd' && (cur[0] === 'saleEnd' || cur[0] === 'saleKept')
             ? `<span class="tag tag--warn" title="Акційна ціна була ${fmtPrice(r.c.from)} грн замість ${fmtPrice(r.c.fromOld)} грн${r.c.to === r.c.from ? '; після акції ціна не змінилась' : ''}">⌛ ${
                 r.c.to === r.c.from ? `акція −${pct(r.c.from, r.c.fromOld)}% скінчилась` : `була акція −${pct(r.c.from, r.c.fromOld)}%`
               }</span>`

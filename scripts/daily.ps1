@@ -26,7 +26,7 @@ $scrapeOut = @()
 # Короткий звіт на робочому столі після кожного запуску (перезаписується).
 function Write-StatusFile {
     $today = $started.ToString('yyyy-MM-dd')
-    $sum = @{ down = 0; up = 0; sale = 0; saleEnd = 0; added = 0; cities = 0 }
+    $sum = @{ down = 0; up = 0; sale = 0; saleEnd = 0; saleKept = 0; added = 0; cities = 0 }
     foreach ($f in Get-ChildItem (Join-Path $root 'site\data\cities') -Recurse -Filter 'changes.json' -ErrorAction SilentlyContinue) {
         try { $c = Get-Content $f.FullName -Raw -Encoding UTF8 | ConvertFrom-Json } catch { continue }
         if ($c.date -ne $today) { continue }
@@ -36,7 +36,8 @@ function Write-StatusFile {
         $sum.down += @($plain | Where-Object { $_.to -lt $_.from }).Count
         $sum.up += @($plain | Where-Object { $_.to -gt $_.from }).Count
         $sum.sale += @($c.prices | Where-Object { $_.toOld }).Count
-        $sum.saleEnd += @($c.prices | Where-Object { $_.fromOld -and -not $_.toOld }).Count
+        $sum.saleEnd += @($c.prices | Where-Object { $_.fromOld -and -not $_.toOld -and $_.to -ne $_.from }).Count
+        $sum.saleKept += @($c.prices | Where-Object { $_.fromOld -and -not $_.toOld -and $_.to -eq $_.from }).Count
         $sum.added += @($c.added).Count
     }
     $finished = Get-Date
@@ -54,7 +55,7 @@ function Write-StatusFile {
     )
     if ($done) { $lines += $done }
     if ($sum.cities) {
-        $lines += "Зміни за сьогодні (міст: $($sum.cities)): подешевшало $($sum.down), подорожчало $($sum.up), нових акцій $($sum.sale), акцій закінчилось $($sum.saleEnd), нових товарів $($sum.added)"
+        $lines += "Зміни за сьогодні (міст: $($sum.cities)): подешевшало $($sum.down), подорожчало $($sum.up), нових акцій $($sum.sale), акцій закінчилось $($sum.saleEnd), після акції ціна та сама $($sum.saleKept), нових товарів $($sum.added)"
     }
     $lines += '', "Сайт: https://fima02.github.io/pricetrail/", "Повний журнал: $(Join-Path $root 'daily.log')"
     $file = Join-Path ([Environment]::GetFolderPath('Desktop')) 'PriceTrail — статус збору.txt'

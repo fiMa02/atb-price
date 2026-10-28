@@ -246,7 +246,7 @@ select {
   .filters .search { flex: 1 1 0; }
   .sort-pill { flex: 0 0 46%; width: 46%; }
   .hide-sm { display: none; }
-  .filters__row .pill { flex: 1 1 calc(50% - 4px); }
+  .filters__row .pill, .filters__row #group { flex: 1 1 calc(50% - 4px); }
   .fpanel { padding-bottom: 10px; }
   .fpanel__head { padding: 9px 12px; gap: 8px; }
 }

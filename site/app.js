@@ -889,9 +889,49 @@ function initFilterPanel() {
   const saved = store.get('fpanel');
   // Типово розгорнута на комп'ютері й згорнута на телефоні; далі — як залишив користувач.
   panel.open = saved ? saved === 'open' : innerWidth > 720;
+  let autoClosed = false;
+  let from = scrollY; // звідки рахувати прокрутку донизу
   panel.addEventListener('toggle', () => {
-    store.set('fpanel', panel.open ? 'open' : 'closed');
-    if (panel.open && $('.groups')) initGroupsRow();
+    // Автозгортання під час прокрутки не міняє збережений вибір.
+    if (!autoClosed) store.set('fpanel', panel.open ? 'open' : 'closed');
+    autoClosed = false;
+    if (panel.open && $('.groups')) {
+      initGroupsRow();
+      from = scrollY;
+    }
+  });
+  // На телефоні відкрита секція займає пів екрана — згортаємо її, коли гортають список донизу.
+  const phone = matchMedia('(max-width: 520px)');
+  addEventListener(
+    'scroll',
+    () => {
+      if (!panel.open || !phone.matches || document.querySelector('.top').classList.contains('is-product')) {
+        from = scrollY;
+        return;
+      }
+      if (scrollY < from) from = scrollY;
+      else if (scrollY - from > 40) {
+        autoClosed = true;
+        keepContent(() => (panel.open = false));
+      }
+    },
+    { passive: true },
+  );
+  // Шапка закріплена: коли секція змінює висоту, вміст під нею зсувається. Повертаємо його на місце
+  // (якщо браузер уже сам це зробив — різниця буде нульова).
+  const keepContent = (change) => {
+    if (scrollY < 1) return change();
+    const before = app.getBoundingClientRect().top;
+    change();
+    requestAnimationFrame(() => {
+      const d = app.getBoundingClientRect().top - before;
+      if (d) scrollBy(0, d);
+      from = scrollY;
+    });
+  };
+  panel.querySelector('summary').addEventListener('click', (e) => {
+    e.preventDefault();
+    keepContent(() => (panel.open = !panel.open));
   });
   // Клік по чипу розділу (ряд перемальовується разом зі списком, тому делегуємо).
   panel.addEventListener('click', (e) => {

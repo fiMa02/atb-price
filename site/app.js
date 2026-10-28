@@ -823,7 +823,7 @@ function renderToday(tab) {
     app.innerHTML = `${html}<div class="empty"><b>😌</b>Ціни не змінилися<br><span class="note">Порівняно з попереднім днем — жодних змін</span></div>`;
     return;
   }
-  html += `<div class="today-bar"><div class="seg today-tabs" role="tablist">${tabs
+  html += `<div class="today-bar"><div class="today-tabs" role="tablist">${tabs
     .map(([k, label, list]) => `<a href="#/today/${k}" role="tab" aria-selected="${k === cur[0]}">${label} <small>${list.length}</small></a>`)
     .join('')}</div>
     <select id="todaySort" class="pill today-sort" aria-label="Сортування">${Object.entries(TODAY_SORTS)

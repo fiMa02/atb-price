@@ -746,20 +746,21 @@ function todayBanner() {
   return `<a class="today-banner" href="#/today"><b>Що змінилося ${fmtDate(parseDate(d.date), false)}</b>${parts.join('')}<span class="today-banner__go">Переглянути →</span></a>`;
 }
 
-// Сортування в «Що змінилося»: «За зміною» — порядок вкладки (найбільша зміна чи знижка першою).
+// Сортування в «Що змінилося». Вкладки вже впорядковані від найбільшої зміни (чи знижки) —
+// «change-desc» лишає цей порядок, «change-asc» перевертає його.
 const TODAY_SORTS = {
-  change: ['За зміною'],
+  'change-desc': ['Спершу найбільша зміна'],
+  'change-asc': ['Спершу найменша зміна', 'reverse'],
   'price-asc': ['Спершу дешевші', (a, b) => a.price - b.price],
   'price-desc': ['Спершу дорожчі', (a, b) => b.price - a.price],
   'per-asc': ['Дешевші за кг/л/шт', (a, b) => (a._per?.price ?? Infinity) - (b._per?.price ?? Infinity)],
-  discount: ['Найбільша знижка', (a, b) => discount(b) - discount(a)],
   name: ['За назвою', (a, b) => a.name.localeCompare(b.name, 'uk')],
 };
-let todaySort = 'change';
+let todaySort = 'change-desc';
 try {
-  todaySort = sessionStorage.getItem('todaySort') || 'change';
+  todaySort = sessionStorage.getItem('todaySort') || todaySort;
 } catch {}
-if (!TODAY_SORTS[todaySort]) todaySort = 'change';
+if (!TODAY_SORTS[todaySort]) todaySort = 'change-desc'; // зокрема колишні «change» і «discount»
 
 function renderToday(tab) {
   document.querySelector('.top').classList.add('is-product');
@@ -796,8 +797,8 @@ function renderToday(tab) {
               }</span>`
             : '',
         );
-  const sorter = TODAY_SORTS[todaySort]?.[1];
-  const list = sorter ? [...cur[2]].sort((a, b) => sorter(a.p, b.p)) : cur[2];
+  const sorter = TODAY_SORTS[todaySort][1];
+  const list = sorter === 'reverse' ? [...cur[2]].reverse() : sorter ? [...cur[2]].sort((a, b) => sorter(a.p, b.p)) : cur[2];
   html += `<div class="grid">${list.map(tile).join('')}</div>`;
   app.innerHTML = html;
   $('#todaySort').onchange = (e) => {

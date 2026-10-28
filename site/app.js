@@ -873,7 +873,7 @@ function renderList() {
   </div>`;
   if (!list.length) {
     const why = filters.inflated ? 'Акцій із завищеною «ціною до знижки» тут поки не виявлено' : 'Спробуйте іншу назву або приберіть фільтри';
-    app.innerHTML = `${groupsRow}<div class="empty"><b>🔍</b>Нічого не знайдено<br><span class="note">${why}</span></div>`;
+    app.innerHTML = `${filters.q ? '' : todayBanner()}${groupsRow}<div class="empty"><b>🔍</b>Нічого не знайдено<br><span class="note">${why}</span></div>`;
     initGroupsRow(scrollLeft);
     return;
   }

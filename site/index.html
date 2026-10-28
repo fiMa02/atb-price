@@ -5,8 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>PriceTrail — історія цін</title>
   <meta name="description" content="PriceTrail — трекер цін у супермаркетах: пошук товарів, графік зміни ціни й перевірка акцій.">
-  <meta name="theme-color" content="#f5f6fa" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#0c0f14" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f5f6fa">
+  <script>
+    // Тема: 'light' / 'dark' — вибір користувача, інакше як у системі. Ставимо до першого малювання.
+    (function () {
+      var dark = matchMedia('(prefers-color-scheme: dark)');
+      window.applyTheme = function () {
+        var t = null;
+        try { t = localStorage.getItem('theme'); } catch (e) {}
+        var on = t === 'dark' || (t !== 'light' && dark.matches);
+        document.documentElement.dataset.theme = on ? 'dark' : 'light';
+        document.querySelector('meta[name=theme-color]').content = on ? '#0c0f14' : '#f5f6fa';
+      };
+      applyTheme();
+      dark.addEventListener('change', applyTheme);
+    })();
+  </script>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon-192.png">
@@ -29,6 +43,7 @@
             <div class="city-list" id="cityList" role="listbox" aria-label="Місто"></div>
           </div>
         </div>
+        <button type="button" class="fav-link theme-btn" id="themeBtn"></button>
         <a href="#/fav" class="fav-link" id="favLink" aria-label="Обране"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.6-4.7-9.4-9.6C1.4 7.6 3.6 4.5 7 4.5c2 0 3.5 1.1 5 3 1.5-1.9 3-3 5-3 3.4 0 5.6 3.1 4.4 6.4-1.8 4.9-9.4 9.6-9.4 9.6Z"/></svg><span class="fav-link__n" id="favN" hidden></span></a>
       </div>
     </div>

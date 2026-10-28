@@ -27,33 +27,32 @@
   --r-sm: 10px;
   color-scheme: light;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0c0f14;
-    --surface: #151922;
-    --surface-2: #1d2330;
-    --media: #f4f5f7;
-    --ink: #eef1f6;
-    --ink-2: #b6bdca;
-    --muted: #7d8697;
-    --line: #252c3a;
-    --accent: #6d8cff;
-    --accent-ink: #0c0f14;
-    --accent-soft: #1d2747;
-    --sale: #ff6b5e;
-    --sale-soft: #3a1c1a;
-    --good: #4fd394;
-    --good-soft: #13301f;
-    --warn: #f3a93f;
-    --warn-soft: #33270f;
-    --chart-line: #6d8cff;
-    --grid: #202634;
-    --map-mid: #5d6577;
-    --header: rgba(12, 15, 20, 0.78);
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-    --shadow-hover: 0 12px 32px rgba(0, 0, 0, 0.45);
-    color-scheme: dark;
-  }
+/* Темна тема: data-theme на <html> ставить скрипт у index.html (вибір користувача або системна тема) */
+:root[data-theme=dark] {
+  --bg: #0c0f14;
+  --surface: #151922;
+  --surface-2: #1d2330;
+  --media: #f4f5f7;
+  --ink: #eef1f6;
+  --ink-2: #b6bdca;
+  --muted: #7d8697;
+  --line: #252c3a;
+  --accent: #6d8cff;
+  --accent-ink: #0c0f14;
+  --accent-soft: #1d2747;
+  --sale: #ff6b5e;
+  --sale-soft: #3a1c1a;
+  --good: #4fd394;
+  --good-soft: #13301f;
+  --warn: #f3a93f;
+  --warn-soft: #33270f;
+  --chart-line: #6d8cff;
+  --grid: #202634;
+  --map-mid: #5d6577;
+  --header: rgba(12, 15, 20, 0.78);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-hover: 0 12px 32px rgba(0, 0, 0, 0.45);
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -103,6 +102,11 @@ svg { flex: none; }
   background: var(--surface); border: 1px solid var(--line); color: var(--ink); text-decoration: none;
 }
 .fav-link[aria-current] { color: var(--sale); }
+.theme-btn { cursor: pointer; padding: 0; font: inherit; }
+.theme-btn:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
+.theme-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 380px) { .fav-link { width: 36px; height: 36px; } .top__actions { gap: 6px; } }
+.theme-btn svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .fav-link__n[hidden] { display: none; }
 .fav-link:hover { border-color: color-mix(in srgb, var(--sale) 40%, var(--line)); }
 .fav-link svg, .fav-btn svg, .fav-toggle svg, .toast svg {
@@ -566,7 +570,7 @@ button:hover, .btn:hover { border-color: var(--accent); }
 .tip b { font-size: 15px; font-variant-numeric: tabular-nums; }
 .tip .old { color: inherit; opacity: .6; }
 .tip .warn { color: var(--warn); }
-@media (prefers-color-scheme: light) { .tip .warn { color: #ffc266; } }
+:root:not([data-theme=dark]) .tip .warn { color: #ffc266; }
 .legend { display: flex; gap: 6px 16px; flex-wrap: wrap; font-size: 12px; color: var(--ink-2); margin-top: 8px; }
 .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 4px; margin-right: 6px; vertical-align: -2px; }
 .note { color: var(--muted); font-size: 13px; }

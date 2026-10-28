@@ -129,6 +129,40 @@ async function loadCities() {
   });
 }
 
+// Тема: як у системі → темна → світла → як у системі. Саму тему ставить applyTheme з index.html.
+const THEMES = {
+  auto: ['Тема як у системі', '<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16Z" fill="currentColor"/>'],
+  dark: ['Темна тема', '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/>'],
+  light: [
+    'Світла тема',
+    '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>',
+  ],
+};
+const THEME_NEXT = { auto: 'dark', dark: 'light', light: 'auto' };
+function initTheme() {
+  const btn = $('#themeBtn');
+  const show = () => {
+    const t = THEMES[store.get('theme')] ? store.get('theme') : 'auto';
+    const [label, icon] = THEMES[t];
+    btn.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true">${icon}</svg>`;
+    btn.title = `${label}. Натисніть, щоб змінити на: ${THEMES[THEME_NEXT[t]][0].toLowerCase()}`;
+    btn.setAttribute('aria-label', `${label} (змінити)`);
+    return t;
+  };
+  show();
+  btn.onclick = () => {
+    const next = THEME_NEXT[show()];
+    if (next === 'auto') {
+      try {
+        localStorage.removeItem('theme');
+      } catch {}
+    } else store.set('theme', next);
+    window.applyTheme?.();
+    show();
+  };
+}
+initTheme();
+
 // Вибір міста на комп'ютері: власне меню з пошуком (системний список з 26 міст незручний).
 // На сенсорних екранах лишається звичайний <select> — його показує CSS.
 function initCityMenu() {

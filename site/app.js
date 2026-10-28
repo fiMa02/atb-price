@@ -1461,11 +1461,15 @@ function renderStats(el, hist, days, unit) {
 const scrollMemo = new Map();
 const pageKey = (hash) => (hash || '#/').replace(/^#\/?$/, '#/');
 let backTo = '#/';
-// «Обране» відкривають із шапки на будь-якій сторінці — повертаємось туди, звідки прийшли (не зі сторінки товару).
+// «Обране» відкривають із шапки на будь-якій сторінці — повертаємось туди, звідки прийшли.
+// Якщо це сторінка товару, запам'ятовуємо і її власне «назад», щоб після повернення воно було тим самим.
 let favFrom = '#/';
+let favFromBack = '#/';
 const backLink = (to = backTo) => {
-  const label = to.startsWith('#/today') ? 'Що змінилося' : to === '#/fav' ? 'Обране' : 'Усі товари';
-  return `<a class="back" href="${esc(to)}">← ${label}</a>`;
+  const p = to.startsWith('#/p/') && state.byId.get(Number(to.slice(4)));
+  const name = p && (p.name.length > 40 ? `${p.name.slice(0, 38).trim()}…` : p.name);
+  const label = p ? name : to.startsWith('#/today') ? 'Що змінилося' : to === '#/fav' ? 'Обране' : 'Усі товари';
+  return `<a class="back" href="${esc(to)}">← ${esc(label)}</a>`;
 };
 
 function route(e) {
@@ -1475,6 +1479,11 @@ function route(e) {
     backTo = from;
     if (location.hash === '#/fav' && from !== '#/fav') favFrom = from;
   }
+  if (from?.startsWith('#/p/') && location.hash === '#/fav') {
+    favFrom = from;
+    favFromBack = backTo;
+  }
+  if (from === '#/fav' && favFrom.startsWith('#/p/') && pageKey(location.hash) === favFrom) backTo = favFromBack;
   // Повертаємось зі сторінки товару чи з «Обраного» — відновлюємо прокрутку сторінки, куди повернулись.
   const restore = from?.startsWith('#/p/') || (from === '#/fav' && location.hash !== '#/fav') ? scrollMemo.get(pageKey(location.hash)) : null;
   const m = location.hash.match(/^#\/p\/(\d+)/);

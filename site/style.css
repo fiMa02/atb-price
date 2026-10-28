@@ -167,7 +167,9 @@ select {
   cursor: pointer; text-overflow: ellipsis;
 }
 
-.filters { padding-block: 2px 12px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.filters { padding-block: 2px 12px; display: flex; align-items: stretch; gap: 8px; }
+.filters .search { flex: 1 1 auto; min-width: 0; }
+.sort-pill { flex: 0 1 230px; }
 .search {
   display: flex; align-items: center; gap: 10px;
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md);
@@ -178,7 +180,41 @@ select {
 .search input { flex: 1; border: 0; background: transparent; padding: 12px 0; font-size: 16px; outline: none; min-width: 0; }
 .search input::placeholder { color: var(--muted); }
 
-.filters__row { display: flex; gap: 8px; align-items: center; }
+.filters__row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+.filters__row #cat { flex: 0 1 300px; }
+
+/* Категорії та фільтри — секція, що згортається (сортування лишається в шапці) */
+.fpanel { margin-top: 14px; }
+.fpanel .groups-wrap, .fpanel .groups { margin-top: 12px; }
+.top.is-product ~ .fpanel { display: none; }
+.fpanel__head {
+  display: flex; align-items: center; gap: 10px; cursor: pointer; list-style: none;
+  padding: 10px 14px; border-radius: var(--r-md);
+  background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow);
+  font-size: 14px; -webkit-user-select: none; user-select: none;
+}
+.fpanel__head::-webkit-details-marker { display: none; }
+.fpanel__head:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
+.fpanel__head svg { width: 18px; height: 18px; fill: none; stroke: var(--ink-2); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.fpanel__head b { font-weight: 600; white-space: nowrap; }
+.show-sm { display: none; }
+@media (max-width: 520px) { .show-sm { display: inline; } }
+.fpanel__active { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; flex: 1; }
+.fpanel__active span {
+  padding: 2px 9px; border-radius: 999px; font-size: 12.5px; font-weight: 600;
+  background: var(--accent-soft); color: var(--accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+}
+.fpanel__chev { margin-left: auto; transition: transform .2s; }
+.fpanel[open] .fpanel__chev { transform: rotate(180deg); }
+.fpanel[open] .fpanel__active { display: none; }
+.fpanel[open] .fpanel__head b { flex: 1; }
+.fpanel__body { padding: 2px 0 4px; }
+.fpanel__reset {
+  border: 0; background: none; box-shadow: none; padding: 8px 6px; margin-left: auto;
+  color: var(--accent); font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.fpanel__reset[hidden] { display: none; }
+.fpanel__reset:hover { text-decoration: underline; }
 .pill {
   flex: 1 1 0; min-width: 0;
   background-color: var(--surface); border: 1px solid var(--line); border-radius: 999px;
@@ -203,9 +239,12 @@ select {
   .search input { padding: 10px 0; }
   .pill { padding: 8px 28px 8px 12px; font-size: 13px; background-position: right 10px center; }
   .chip-toggle span { padding: 8px 12px; font-size: 13px; }
-  /* категорія й сортування — у першому рядку, фільтри-перемикачі — у другому */
-  .filters__row { flex-wrap: wrap; }
-  .filters__row .pill { flex-basis: calc(50% - 4px); }
+  .filters .search { flex: 1 1 0; }
+  .sort-pill { flex: 0 0 46%; width: 46%; }
+  .hide-sm { display: none; }
+  .filters__row #cat { flex: 1 1 100%; }
+  .fpanel { margin-top: 10px; }
+  .fpanel__head { padding: 9px 12px; gap: 8px; }
 }
 
 /* ---------- Розділи ---------- */

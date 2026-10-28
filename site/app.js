@@ -550,6 +550,8 @@ function applyFilters() {
 
 function bindFilters() {
   $('#q').value = filters.q;
+  // На вузькому екрані поруч стоїть сортування — довга підказка не вміщається.
+  if (matchMedia('(max-width: 520px)').matches) $('#q').placeholder = 'Пошук';
   $('#cat').value = filters.cat;
   $('#sort').value = filters.sort;
   $('#sale').checked = filters.sale;
@@ -587,15 +589,7 @@ function bindFilters() {
     b.setAttribute('aria-pressed', isFav(id));
     b.setAttribute('aria-label', isFav(id) ? 'Прибрати з обраного' : 'Додати в обране');
   });
-  // Клік по чипу розділу (ряд чипів перемальовується разом зі списком, тому делегуємо).
-  app.addEventListener('click', (e) => {
-    const chip = e.target.closest('[data-group]');
-    if (!chip) return;
-    filters.group = chip.dataset.group;
-    filters.cat = '';
-    fillCategories();
-    applyFilters();
-  });
+  initFilterPanel();
   $('#q').addEventListener('input', () => {
     clearTimeout(t);
     t = setTimeout(update, 150);
@@ -693,6 +687,9 @@ function initGroupsRow(scrollLeft) {
     if (active) row.scrollLeft = active.offsetLeft - (row.clientWidth - active.offsetWidth) / 2;
   }
   updateArrows();
+  // Повторний виклик (розгорнули секцію) — лише оновити стрілки, обробники вже є.
+  if (row.dataset.ready) return;
+  row.dataset.ready = '1';
   row.addEventListener('scroll', updateArrows, { passive: true });
   for (const b of [left, right]) {
     b.onclick = () => row.scrollBy({ left: Number(b.dataset.dir) * row.clientWidth * 0.7, behavior: 'smooth' });
@@ -856,25 +853,65 @@ function renderToday(tab) {
   };
 }
 
-function renderList() {
-  document.querySelector('.top').classList.remove('is-product');
-  document.title = 'PriceTrail — історія цін';
-  const list = filtered();
-  // Ряд розділів перемальовується разом зі списком — зберігаємо його горизонтальну прокрутку.
+// Секція «Категорії та фільтри»: ряд розділів і підсумок увімкнених фільтрів для згорнутого вигляду.
+function renderGroups() {
+  // Ряд перемальовується після кожної зміни фільтрів — зберігаємо його горизонтальну прокрутку.
   const scrollLeft = $('.groups')?.scrollLeft;
   const chip = (g, label, n) =>
     `<button class="gchip" data-group="${esc(g)}" aria-pressed="${filters.group === g}">${label}${n != null ? `<small>${n}</small>` : ''}</button>`;
-  const groupsRow = `<div class="groups-wrap">
+  $('#groupsRow').innerHTML = `<div class="groups-wrap">
     <button class="gscroll gscroll--left" data-dir="-1" aria-label="Прокрутити розділи ліворуч">‹</button>
     <nav class="groups" aria-label="Розділи">${chip('', 'Усі товари')}${state.groups
       .map(([g, n]) => chip(g, `<span aria-hidden="true">${GROUPS.get(g) || '📦'}</span>${esc(g)}`, n))
       .join('')}</nav>
     <button class="gscroll gscroll--right" data-dir="1" aria-label="Прокрутити розділи праворуч">›</button>
   </div>`;
+  if ($('#fpanel').open) initGroupsRow(scrollLeft);
+  const active = [
+    filters.group && `${GROUPS.get(filters.group) || '📦'} ${filters.group}`,
+    filters.cat,
+    filters.sale && '% Акції',
+    filters.card && '💳 З карткою',
+    filters.inflated && '⚠ Завищені',
+  ].filter(Boolean);
+  $('#fActive').innerHTML = active.map((a) => `<span>${esc(a)}</span>`).join('');
+  $('#fReset').hidden = !active.length;
+}
+
+function initFilterPanel() {
+  const panel = $('#fpanel');
+  const saved = store.get('fpanel');
+  // Типово розгорнута на комп'ютері й згорнута на телефоні; далі — як залишив користувач.
+  panel.open = saved ? saved === 'open' : innerWidth > 720;
+  panel.addEventListener('toggle', () => {
+    store.set('fpanel', panel.open ? 'open' : 'closed');
+    if (panel.open && $('.groups')) initGroupsRow();
+  });
+  // Клік по чипу розділу (ряд перемальовується разом зі списком, тому делегуємо).
+  panel.addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-group]');
+    if (!chip) return;
+    filters.group = chip.dataset.group;
+    filters.cat = '';
+    fillCategories();
+    applyFilters();
+  });
+  $('#fReset').onclick = () => {
+    Object.assign(filters, { group: '', cat: '', sale: false, card: false, inflated: false });
+    for (const id of ['#sale', '#card', '#inflated']) $(id).checked = false;
+    fillCategories();
+    applyFilters();
+  };
+}
+
+function renderList() {
+  document.querySelector('.top').classList.remove('is-product');
+  document.title = 'PriceTrail — історія цін';
+  const list = filtered();
+  renderGroups();
   if (!list.length) {
     const why = filters.inflated ? 'Акцій із завищеною «ціною до знижки» тут поки не виявлено' : 'Спробуйте іншу назву або приберіть фільтри';
-    app.innerHTML = `${filters.q ? '' : todayBanner()}${groupsRow}<div class="empty"><b>🔍</b>Нічого не знайдено<br><span class="note">${why}</span></div>`;
-    initGroupsRow(scrollLeft);
+    app.innerHTML = `${filters.q ? '' : todayBanner()}<div class="empty"><b>🔍</b>Нічого не знайдено<br><span class="note">${why}</span></div>`;
     return;
   }
   let count = `Знайдено: ${list.length.toLocaleString('uk')}`;
@@ -883,10 +920,9 @@ function renderList() {
     const n = list.filter((p) => perIn(p, perUnitSort) != null).length;
     count += ` · з ціною за 1 ${perUnitSort}: ${n.toLocaleString('uk')}`;
   }
-  app.innerHTML = `${filters.q ? '' : todayBanner()}${groupsRow}<p class="count">${count}</p>
+  app.innerHTML = `${filters.q ? '' : todayBanner()}<p class="count">${count}</p>
     <div class="grid" id="grid">${list.slice(0, state.shown).map((p) => card(p)).join('')}</div>
     ${list.length > state.shown ? '<button class="more" id="more">Показати ще</button>' : ''}`;
-  initGroupsRow(scrollLeft);
   placeAds($('#grid'));
   const more = $('#more');
   if (more) {

@@ -185,11 +185,11 @@ select {
 .search input::placeholder { color: var(--muted); }
 
 .filters__row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
-.filters__row #cat { flex: 0 1 300px; }
+.filters__row .pill { flex: 0 1 280px; }
+.filters__row #group { flex-basis: 330px; }
 
 /* Категорії та фільтри — секція, що згортається (сортування лишається в шапці) */
 .fpanel { padding-bottom: 12px; }
-.fpanel .groups-wrap, .fpanel .groups { margin-top: 12px; }
 .top.is-product .fpanel { display: none; }
 .fpanel__head {
   display: flex; align-items: center; gap: 10px; cursor: pointer; list-style: none;
@@ -246,49 +246,10 @@ select {
   .filters .search { flex: 1 1 0; }
   .sort-pill { flex: 0 0 46%; width: 46%; }
   .hide-sm { display: none; }
-  .filters__row #cat { flex: 1 1 100%; }
+  .filters__row .pill { flex: 1 1 calc(50% - 4px); }
   .fpanel { padding-bottom: 10px; }
   .fpanel__head { padding: 9px 12px; gap: 8px; }
 }
-
-/* ---------- Розділи ---------- */
-.groups {
-  display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none;
-  margin: 16px -16px 0; padding: 2px 16px 4px;
-  scroll-padding-inline: 16px;
-  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 16px, #000 calc(100% - 24px), transparent);
-  mask-image: linear-gradient(90deg, transparent 0, #000 16px, #000 calc(100% - 24px), transparent);
-}
-.groups::-webkit-scrollbar { display: none; }
-.groups-wrap { position: relative; }
-.groups { -webkit-user-select: none; user-select: none; }
-.groups.is-dragging { cursor: grabbing; }
-.groups.is-dragging .gchip { pointer-events: none; }
-.gscroll { display: none; }
-/* З мишею — стрілки обабіч ряду (а не поверх чипів); на сенсорних екранах їх немає, там свайп. */
-@media (hover: hover) {
-  .groups-wrap { display: flex; align-items: center; gap: 6px; margin-top: 16px; }
-  .groups-wrap .groups {
-    flex: 1; min-width: 0; margin: 0; padding: 2px 12px 4px; scroll-padding-inline: 12px;
-    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 12px), transparent);
-    mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 12px), transparent);
-  }
-  .gscroll {
-    display: inline-flex; flex: none; width: 36px; height: 36px; padding: 0; justify-content: center;
-    font-size: 22px; line-height: 1; font-weight: 500;
-    background: var(--surface); box-shadow: var(--shadow);
-  }
-  .gscroll:disabled { opacity: .35; pointer-events: none; }
-}
-.gchip {
-  flex: none; display: inline-flex; align-items: center; gap: 7px;
-  padding: 8px 14px; font-size: 14px; font-weight: 500; white-space: nowrap;
-  background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow);
-}
-.gchip span { font-size: 17px; line-height: 1; }
-.gchip small { color: var(--muted); font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; }
-.gchip[aria-pressed=true] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
-.gchip[aria-pressed=true] small { color: inherit; opacity: .65; }
 
 /* ---------- Список ---------- */
 .status { color: var(--muted); text-align: center; padding: 56px 0; }

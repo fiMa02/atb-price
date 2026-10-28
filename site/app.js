@@ -672,70 +672,6 @@ function card(p, from, extra = '') {
 const skeleton = (n = 12) =>
   `<p class="count">&nbsp;</p><div class="grid">${'<div class="card skeleton"><div class="card__media"></div><div class="card__body"><div class="sk"></div><div class="sk" style="width:60%"></div><div class="sk" style="width:40%;height:18px;margin-top:8px"></div></div></div>'.repeat(n)}</div>`;
 
-// Ряд розділів на комп'ютері: стрілки, прокрутка коліщатком і перетягування мишею.
-function initGroupsRow(scrollLeft) {
-  const row = $('.groups');
-  const left = $('.gscroll--left');
-  const right = $('.gscroll--right');
-  const updateArrows = () => {
-    left.disabled = row.scrollLeft <= 2;
-    right.disabled = row.scrollLeft + row.clientWidth >= row.scrollWidth - 2;
-  };
-  if (scrollLeft != null) row.scrollLeft = scrollLeft;
-  else {
-    const active = row.querySelector('[aria-pressed=true]');
-    if (active) row.scrollLeft = active.offsetLeft - (row.clientWidth - active.offsetWidth) / 2;
-  }
-  updateArrows();
-  // Повторний виклик (розгорнули секцію) — лише оновити стрілки, обробники вже є.
-  if (row.dataset.ready) return;
-  row.dataset.ready = '1';
-  row.addEventListener('scroll', updateArrows, { passive: true });
-  for (const b of [left, right]) {
-    b.onclick = () => row.scrollBy({ left: Number(b.dataset.dir) * row.clientWidth * 0.7, behavior: 'smooth' });
-  }
-  // Вертикальне коліщатко миші → горизонтальна прокрутка (поки є куди крутити).
-  row.addEventListener(
-    'wheel',
-    (e) => {
-      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
-      const max = row.scrollWidth - row.clientWidth;
-      if ((e.deltaY < 0 && row.scrollLeft <= 0) || (e.deltaY > 0 && row.scrollLeft >= max)) return;
-      e.preventDefault();
-      row.scrollLeft += e.deltaY;
-    },
-    { passive: false },
-  );
-  // Перетягування мишею; якщо тягнули — клік по чипу не спрацьовує.
-  let drag = null;
-  row.addEventListener('pointerdown', (e) => {
-    if (e.pointerType !== 'mouse' || e.button !== 0) return;
-    drag = { x: e.clientX, left: row.scrollLeft, moved: false };
-  });
-  row.addEventListener('pointermove', (e) => {
-    if (!drag) return;
-    const dx = e.clientX - drag.x;
-    if (Math.abs(dx) > 5) {
-      drag.moved = true;
-      row.classList.add('is-dragging');
-    }
-    if (drag.moved) row.scrollLeft = drag.left - dx;
-  });
-  const end = () => {
-    if (drag?.moved) {
-      const block = (e) => e.stopPropagation();
-      row.addEventListener('click', block, { capture: true });
-      setTimeout(() => {
-        row.removeEventListener('click', block, { capture: true });
-        row.classList.remove('is-dragging');
-      });
-    }
-    drag = null;
-  };
-  row.addEventListener('pointerup', end);
-  row.addEventListener('pointerleave', end);
-}
-
 // ---------- Що змінилося ----------
 // changes.json будує scraper/changes.js: зміни останнього збору відносно попереднього дня.
 
@@ -859,20 +795,12 @@ function renderToday(tab) {
   };
 }
 
-// Секція «Категорії та фільтри»: ряд розділів і підсумок увімкнених фільтрів для згорнутого вигляду.
+// Секція «Категорії та фільтри»: список розділів і підсумок увімкнених фільтрів для згорнутого вигляду.
 function renderGroups() {
-  // Ряд перемальовується після кожної зміни фільтрів — зберігаємо його горизонтальну прокрутку.
-  const scrollLeft = $('.groups')?.scrollLeft;
-  const chip = (g, label, n) =>
-    `<button class="gchip" data-group="${esc(g)}" aria-pressed="${filters.group === g}">${label}${n != null ? `<small>${n}</small>` : ''}</button>`;
-  $('#groupsRow').innerHTML = `<div class="groups-wrap">
-    <button class="gscroll gscroll--left" data-dir="-1" aria-label="Прокрутити розділи ліворуч">‹</button>
-    <nav class="groups" aria-label="Розділи">${chip('', 'Усі товари')}${state.groups
-      .map(([g, n]) => chip(g, `<span aria-hidden="true">${GROUPS.get(g) || '📦'}</span>${esc(g)}`, n))
-      .join('')}</nav>
-    <button class="gscroll gscroll--right" data-dir="1" aria-label="Прокрутити розділи праворуч">›</button>
-  </div>`;
-  if ($('#fpanel').open) initGroupsRow(scrollLeft);
+  $('#group').innerHTML =
+    `<option value="">Усі розділи</option>` +
+    state.groups.map(([g, n]) => `<option value="${esc(g)}">${GROUPS.get(g) || '📦'} ${esc(g)} (${n})</option>`).join('');
+  $('#group').value = filters.group;
   const active = [
     filters.group && `${GROUPS.get(filters.group) || '📦'} ${filters.group}`,
     filters.cat,
@@ -895,10 +823,7 @@ function initFilterPanel() {
     // Автозгортання під час прокрутки не міняє збережений вибір.
     if (!autoClosed) store.set('fpanel', panel.open ? 'open' : 'closed');
     autoClosed = false;
-    if (panel.open && $('.groups')) {
-      initGroupsRow();
-      from = scrollY;
-    }
+    if (panel.open) from = scrollY;
   });
   // На телефоні відкрита секція займає пів екрана — згортаємо її, коли гортають список донизу.
   const phone = matchMedia('(max-width: 520px)');
@@ -933,11 +858,8 @@ function initFilterPanel() {
     e.preventDefault();
     keepContent(() => (panel.open = !panel.open));
   });
-  // Клік по чипу розділу (ряд перемальовується разом зі списком, тому делегуємо).
-  panel.addEventListener('click', (e) => {
-    const chip = e.target.closest('[data-group]');
-    if (!chip) return;
-    filters.group = chip.dataset.group;
+  $('#group').addEventListener('change', (e) => {
+    filters.group = e.target.value;
     filters.cat = '';
     fillCategories();
     applyFilters();

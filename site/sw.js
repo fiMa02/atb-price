@@ -1,8 +1,9 @@
 // Оболонка сайту — з кешу; дані — спершу з мережі (щоб ціни були свіжими), з кешу лише офлайн.
-const CACHE = 'pricetrail-v48';
+const V = 49; // збільшувати разом із ?v= в index.html при кожній зміні сайту
+const CACHE = `pricetrail-v${V}`;
 // Обране (копія з localStorage сторінки) і вже надіслані сповіщення — не видаляються при оновленні.
 const STATE = 'pricetrail-state';
-const SHELL = ['./', 'index.html', 'style.css', 'app.js', 'icon.svg', 'manifest.webmanifest'];
+const SHELL = ['./', 'index.html', `style.css?v=${V}`, `app.js?v=${V}`, 'icon.svg', 'manifest.webmanifest'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)));
@@ -17,8 +18,9 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== location.origin) return;
+  // no-cache: браузер звіряє файл із сервером (ETag), а не бере мовчки з HTTP-кешу (на GitHub Pages — до 10 хв).
   e.respondWith(
-    fetch(e.request)
+    fetch(e.request.mode === 'navigate' ? e.request.url : e.request, { cache: 'no-cache' })
       .then((res) => {
         if (res.ok) {
           const copy = res.clone();

@@ -1480,10 +1480,16 @@ function route(e) {
   else $('#favLink').removeAttribute('aria-current');
   const today = location.hash.match(/^#\/today(?:\/(\w+))?/);
   const render = () => {
-    if (m) renderProduct(Number(m[1]));
-    else if (onFavs) renderFavs();
-    else if (today) renderToday(today[1]);
-    else renderList();
+    // Помилка всередині startViewTransition не дійде до жодного обробника — сторінка лишилася б із заглушками.
+    try {
+      if (m) renderProduct(Number(m[1]));
+      else if (onFavs) renderFavs();
+      else if (today) renderToday(today[1]);
+      else renderList();
+    } catch (err) {
+      console.error(err);
+      app.innerHTML = '<p class="status">Не вдалося показати сторінку.<br><button onclick="location.reload()">Оновити</button></p>';
+    }
     if (restore != null) scrollTo(0, restore);
   };
   if (document.startViewTransition && !matchMedia('(prefers-reduced-motion: reduce)').matches) document.startViewTransition(render);

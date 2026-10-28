@@ -27,7 +27,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&display=swap">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=49">
 </head>
 <body>
   <header class="top">
@@ -90,6 +90,7 @@
     <p>Неофіційний проєкт, не пов'язаний з АТБ-Маркет. Ціни зібрано з atbmarket.com для одного магазину в кожному місті; в інших магазинах можуть відрізнятися.</p>
   </footer>
 
-  <script type="module" src="app.js"></script>
+  <!-- ?v= — та сама версія, що CACHE у sw.js: старий HTML ніколи не отримає новий скрипт (і навпаки) -->
+  <script type="module" src="app.js?v=49"></script>
 </body>
 </html>

@@ -478,7 +478,7 @@ function renderFavs() {
       <div class="card__body"><div class="card__name">${esc(f.name)}</div><div class="note">Немає в цьому магазині</div></div>
     </div>`;
   const tile = (x) => (x.p ? card(x.p, x.f.seen?.[state.city.slug]) : missing(x));
-  let html = '<a class="back" href="#/">← Усі товари</a><h1 class="page-title">Обране</h1><div class="panel notify" id="notify"></div>';
+  let html = `${backLink(favFrom)}<h1 class="page-title">Обране</h1><div class="panel notify" id="notify"></div>`;
   if (!items.length) {
     html += '<div class="empty"><b>♡</b>Тут поки порожньо<br><span class="note">Натисніть ♡ на картці товару — і ми підкажемо, коли він подешевшає</span></div>';
   } else {
@@ -1461,9 +1461,11 @@ function renderStats(el, hist, days, unit) {
 const scrollMemo = new Map();
 const pageKey = (hash) => (hash || '#/').replace(/^#\/?$/, '#/');
 let backTo = '#/';
-const backLink = () => {
-  const label = backTo.startsWith('#/today') ? 'Що змінилося' : backTo === '#/fav' ? 'Обране' : 'Усі товари';
-  return `<a class="back" href="${esc(backTo)}">← ${label}</a>`;
+// «Обране» відкривають із шапки на будь-якій сторінці — повертаємось туди, звідки прийшли (не зі сторінки товару).
+let favFrom = '#/';
+const backLink = (to = backTo) => {
+  const label = to.startsWith('#/today') ? 'Що змінилося' : to === '#/fav' ? 'Обране' : 'Усі товари';
+  return `<a class="back" href="${esc(to)}">← ${label}</a>`;
 };
 
 function route(e) {
@@ -1471,9 +1473,10 @@ function route(e) {
   if (from && !from.startsWith('#/p/')) {
     scrollMemo.set(from, scrollY);
     backTo = from;
+    if (location.hash === '#/fav' && from !== '#/fav') favFrom = from;
   }
-  // Повертаємось зі сторінки товару — відновлюємо прокрутку сторінки, куди повернулись.
-  const restore = from?.startsWith('#/p/') ? scrollMemo.get(pageKey(location.hash)) : null;
+  // Повертаємось зі сторінки товару чи з «Обраного» — відновлюємо прокрутку сторінки, куди повернулись.
+  const restore = from?.startsWith('#/p/') || (from === '#/fav' && location.hash !== '#/fav') ? scrollMemo.get(pageKey(location.hash)) : null;
   const m = location.hash.match(/^#\/p\/(\d+)/);
   const onFavs = location.hash === '#/fav';
   if (onFavs) $('#favLink').setAttribute('aria-current', 'page');

@@ -728,7 +728,9 @@ function todayData() {
     ['sale', '% Нові акції', rows.filter((r) => r.kind === 'sale' || (r.c.fromOld && r.c.toOld)).sort((a, b) => discount(b.p) - discount(a.p))],
     // Від найбільшої колишньої знижки.
     // Акція закінчилась і ціна змінилась (зазвичай повернулась до звичайної) — від найбільшої колишньої знижки.
-    ['saleEnd', '⌛ Акція закінчилась', rows.filter((r) => r.kind === 'saleEnd' && r.c.to !== r.c.from).sort(bySaleWas)],
+    ['saleEnd', '⌛ Акція закінчилась', rows.filter((r) => r.kind === 'saleEnd' && r.c.to !== r.c.from && r.c.to <= r.c.fromOld).sort(bySaleWas)],
+    // Після акції ціна вища, ніж «ціна до знижки» під час акції, — фактичне подорожчання. Від найбільшого.
+    ['saleUp', '⇧ Дорожче, ніж до акції', rows.filter((r) => r.kind === 'saleEnd' && r.c.to !== r.c.from && r.c.to > r.c.fromOld).sort((a, b) => b.c.to / b.c.fromOld - a.c.to / a.c.fromOld)],
     // Акція «закінчилась», але ціна та сама — прибрали лише закреслену «ціну до знижки».
     ['saleKept', '＝ Ціна після акції та сама', rows.filter((r) => r.kind === 'saleEnd' && r.c.to === r.c.from).sort(bySaleWas)],
     ['new', '✦ Нові товари', ch.added.map((id) => ({ p: state.byId.get(id) })).filter((r) => r.p)],
@@ -745,6 +747,7 @@ function todayBanner() {
     n('up') && `<span class="tb__up">↑ ${n('up')}</span>`,
     n('sale') && `<span>% ${n('sale')} ${plural(n('sale'), 'нова акція', 'нові акції', 'нових акцій')}</span>`,
     n('saleEnd') && `<span>⌛ ${n('saleEnd')} ${plural(n('saleEnd'), 'акція закінчилась', 'акції закінчились', 'акцій закінчилось')}</span>`,
+    n('saleUp') && `<span class="tb__up">⇧ ${n('saleUp')} дорожче, ніж до акції</span>`,
     n('saleKept') && `<span>＝ ${n('saleKept')} без зміни ціни після акції</span>`,
     n('new') && `<span>✦ ${n('new')} ${plural(n('new'), 'новий товар', 'нові товари', 'нових товарів')}</span>`,
   ].filter(Boolean);
@@ -796,8 +799,11 @@ function renderToday(tab) {
     card(
           r.p,
           // У «Нові акції» стара ціна вже видна закресленою — позначка «було» там зайва.
-          r.c && r.c.to !== r.c.from && cur[0] !== 'sale' ? r.c.from : undefined,
-          r.kind === 'saleEnd' && (cur[0] === 'saleEnd' || cur[0] === 'saleKept')
+          // У «Дорожче, ніж до акції» «було» — це ціна до знижки, з якою й порівнюємо.
+          cur[0] === 'saleUp' ? r.c.fromOld : r.c && r.c.to !== r.c.from && cur[0] !== 'sale' ? r.c.from : undefined,
+          cur[0] === 'saleUp'
+            ? `<span class="tag tag--warn" title="Під час акції: ${fmtPrice(r.c.from)} грн замість ${fmtPrice(r.c.fromOld)} грн; тепер ${fmtPrice(r.c.to)} грн">⇧ +${-pct(r.c.to, r.c.fromOld) || '<1'}% до ціни до акції</span>`
+            : r.kind === 'saleEnd' && (cur[0] === 'saleEnd' || cur[0] === 'saleKept')
             ? `<span class="tag tag--warn" title="Акційна ціна була ${fmtPrice(r.c.from)} грн замість ${fmtPrice(r.c.fromOld)} грн${r.c.to === r.c.from ? '; після акції ціна не змінилась' : ''}">⌛ ${
                 r.c.to === r.c.from ? `акція −${pct(r.c.from, r.c.fromOld)}% скінчилась` : `була акція −${pct(r.c.from, r.c.fromOld)}%`
               }</span>`

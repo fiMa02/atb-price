@@ -94,6 +94,10 @@ svg { flex: none; }
 }
 .top__actions { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .logo { flex: none; }
+/* Дуже вузькі телефони: лишаємо тільки значок, щоб вмістилися місто й кнопки */
+@media (max-width: 360px) {
+  .logo span { display: none; }
+}
 
 /* Обране: кнопка в шапці з лічильником подешевшань */
 .fav-link {
@@ -480,13 +484,19 @@ select {
 .tb__up { color: var(--sale); }
 .today-banner__go { margin-left: auto; color: var(--accent); }
 .today-banner > span { white-space: nowrap; }
+.tb__i { font-style: normal; margin-right: .3em; }
 /* На телефоні — компактно: заголовок і значки з числами в один-два рядки */
 @media (max-width: 520px) {
   .today-banner { gap: 2px 10px; margin-top: 10px; padding: 8px 12px; font-size: 13px; }
   .today-banner > * { order: 2; }
   .today-banner b { order: 0; flex: 1 0 calc(100% - 30px); font-size: 13px; }
   .tb__w { display: none; }
+  .tb__i { margin-right: .1em; }
   .today-banner .today-banner__go { order: 1; font-size: 15px; line-height: 1; }
+}
+@media (max-width: 360px) {
+  .today-banner { gap: 2px 5px; padding-inline: 10px; font-size: 12px; }
+  .today-banner b { font-size: 12.5px; }
 }
 .today-sub { margin: -4px 0 14px; }
 .today-bar { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px 12px; margin-bottom: 16px; }

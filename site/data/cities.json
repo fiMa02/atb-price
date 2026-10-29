@@ -241,5 +241,194 @@
     "address": "вул. Максима Кондратюка, буд. 3",
     "productCount": 3273,
     "updated": "2026-10-29"
+  },
+  {
+    "slug": "nemyriv",
+    "name": "Немирів",
+    "lat": 48.97,
+    "lon": 28.842,
+    "address": "вул. Костельна, буд. 82",
+    "productCount": 3568,
+    "updated": "2026-10-29"
+  },
+  {
+    "slug": "liuboml",
+    "name": "Любомль",
+    "lat": 51.226,
+    "lon": 24.037,
+    "address": "вул. Незалежності, 25",
+    "productCount": 4381,
+    "updated": "2026-10-29"
+  },
+  {
+    "slug": "piatykhatky",
+    "name": "П'ятихатки",
+    "lat": 48.413,
+    "lon": 33.692,
+    "address": "вул. Козацька, 55 а",
+    "productCount": 3827,
+    "updated": "2026-10-29"
+  },
+  {
+    "slug": "korostyshiv",
+    "name": "Коростишів",
+    "lat": 50.319,
+    "lon": 29.057,
+    "address": "вул. Київська 63/вул.Шевченка, 38/61",
+    "productCount": 3510,
+    "updated": "2026-10-29"
+  },
+  {
+    "slug": "rakhiv",
+    "name": "Рахів",
+    "lat": 48.054,
+    "lon": 24.205,
+    "address": "вул. Миру, буд. 135-Б",
+    "productCount": 3841,
+    "updated": "2026-10-29"
+  },
+  {
+    "slug": "vilniansk",
+    "name": "Вільнянськ",
+    "lat": 47.944,
+    "lon": 35.433,
+    "address": "пров. Торговий, 11",
+    "productCount": 2608,
+    "updated": "2026-10-29"
+  },
+  {
+    "slug": "yaremche",
+    "name": "Яремче",
+    "lat": 48.459,
+    "lon": 24.556,
+    "address": "вул. Свободи, 24 а",
+    "productCount": 4073,
+    "updated": "2026-10-29"
+  },
+  {
+    "slug": "kaharlyk",
+    "name": "Кагарлик",
+    "lat": 49.856,
+    "lon": 30.818,
+    "address": "вул. Столична, 2",
+    "productCount": 3080,
+    "updated": "2026-10-29"
+  },
+  {
+    "slug": "novoukrainka",
+    "name": "Новоукраїнка",
+    "lat": 48.318,
+    "lon": 31.526,
+    "address": "вул. Соборна, буд. 54",
+    "productCount": 3897,
+    "updated": "2026-10-29"
+  },
+  {
+    "slug": "brody",
+    "name": "Броди",
+    "lat": 50.086,
+    "lon": 25.152,
+    "address": "вул. Набережна, 79",
+    "productCount": 3873,
+    "updated": "2026-10-29"
+  },
+  {
+    "slug": "bashtanka",
+    "name": "Баштанка",
+    "lat": 47.408,
+    "lon": 32.438,
+    "address": "вул. Героїв Небесної сотні, 42",
+    "productCount": 4017,
+    "updated": "2026-10-29"
+  },
+  {
+    "slug": "balta",
+    "name": "Балта",
+    "lat": 47.938,
+    "lon": 29.623,
+    "address": "вул. Любомирська, 246",
+    "productCount": 3243,
+    "updated": "2026-10-29"
+  },
+  {
+    "slug": "hadiach",
+    "name": "Гадяч",
+    "lat": 50.367,
+    "lon": 34.003,
+    "address": "вул. Гетьманська, 13",
+    "productCount": 3509,
+    "updated": "2026-10-29"
+  },
+  {
+    "slug": "sarny",
+    "name": "Сарни",
+    "lat": 51.338,
+    "lon": 26.602,
+    "address": "вул. Коперніка, буд. 3",
+    "productCount": 4067,
+    "updated": "2026-10-29"
+  },
+  {
+    "slug": "putyvl",
+    "name": "Путивль",
+    "lat": 51.337,
+    "lon": 33.87,
+    "address": "просп. Іоана Путивльського, 36",
+    "productCount": 3326,
+    "updated": "2026-10-29"
+  },
+  {
+    "slug": "buchach",
+    "name": "Бучач",
+    "lat": 49.063,
+    "lon": 25.397,
+    "address": "вул. Галицька, 10 г",
+    "productCount": 4053,
+    "updated": "2026-10-29"
+  },
+  {
+    "slug": "bohodukhiv",
+    "name": "Богодухів",
+    "lat": 50.165,
+    "lon": 35.526,
+    "address": "пл. Незалежності, 20",
+    "productCount": 3452,
+    "updated": "2026-10-29"
+  },
+  {
+    "slug": "chornobaivka",
+    "name": "Чорнобаївка",
+    "lat": 46.697,
+    "lon": 32.553,
+    "address": "вул. Херсонська, 53а",
+    "productCount": 3159,
+    "updated": "2026-10-29"
+  },
+  {
+    "slug": "talne",
+    "name": "Тальне",
+    "lat": 48.88,
+    "lon": 30.703,
+    "address": "вул. Соборна, 24",
+    "productCount": 3419,
+    "updated": "2026-10-29"
+  },
+  {
+    "slug": "khotyn",
+    "name": "Хотин",
+    "lat": 48.506,
+    "lon": 26.495,
+    "address": "вул. Олімпійська, 62",
+    "productCount": 3973,
+    "updated": "2026-10-29"
+  },
+  {
+    "slug": "koriukivka",
+    "name": "Корюківка",
+    "lat": 51.77,
+    "lon": 32.25,
+    "address": "вул. Шевченка, 72 б",
+    "productCount": 3764,
+    "updated": "2026-10-29"
   }
 ]

@@ -133,5 +133,110 @@
     "id": 910,
     "address": "вул. Максима Кондратюка, буд. 3",
     "cityId": 969
+  },
+  "nemyriv": {
+    "id": 623,
+    "address": "вул. Костельна, буд. 82",
+    "cityId": 851
+  },
+  "liuboml": {
+    "id": 1060,
+    "address": "вул. Незалежності, 25",
+    "cityId": 1025
+  },
+  "piatykhatky": {
+    "id": 170,
+    "address": "вул. Козацька, 55 а",
+    "cityId": 467
+  },
+  "korostyshiv": {
+    "id": 601,
+    "address": "вул. Київська 63/вул.Шевченка, 38/61",
+    "cityId": 839
+  },
+  "rakhiv": {
+    "id": 1425,
+    "address": "вул. Миру, буд. 135-Б",
+    "cityId": 1383
+  },
+  "vilniansk": {
+    "id": 274,
+    "address": "пров. Торговий, 11",
+    "cityId": 567
+  },
+  "yaremche": {
+    "id": 1069,
+    "address": "вул. Свободи, 24 а",
+    "cityId": 1003
+  },
+  "kaharlyk": {
+    "id": 751,
+    "address": "вул. Столична, 2",
+    "cityId": 907
+  },
+  "novoukrainka": {
+    "id": 1555,
+    "address": "вул. Соборна, буд. 54",
+    "cityId": 2027
+  },
+  "brody": {
+    "id": 1501,
+    "address": "вул. Набережна, 79",
+    "cityId": 959
+  },
+  "bashtanka": {
+    "id": 177,
+    "address": "вул. Героїв Небесної сотні, 42",
+    "cityId": 471
+  },
+  "balta": {
+    "id": 743,
+    "address": "вул. Любомирська, 246",
+    "cityId": 903
+  },
+  "hadiach": {
+    "id": 304,
+    "address": "вул. Гетьманська, 13",
+    "cityId": 591
+  },
+  "sarny": {
+    "id": 1659,
+    "address": "вул. Коперніка, буд. 3",
+    "cityId": 649
+  },
+  "putyvl": {
+    "id": 354,
+    "address": "просп. Іоана Путивльського, 36",
+    "cityId": 625
+  },
+  "buchach": {
+    "id": 1279,
+    "address": "вул. Галицька, 10 г",
+    "cityId": 633
+  },
+  "bohodukhiv": {
+    "id": 571,
+    "address": "пл. Незалежності, 20",
+    "cityId": 821
+  },
+  "talne": {
+    "id": 617,
+    "address": "вул. Соборна, 24",
+    "cityId": 849
+  },
+  "khotyn": {
+    "id": 1264,
+    "address": "вул. Олімпійська, 62",
+    "cityId": 587
+  },
+  "koriukivka": {
+    "id": 506,
+    "address": "вул. Шевченка, 72 б",
+    "cityId": 761
+  },
+  "chornobaivka": {
+    "id": 1242,
+    "address": "вул. Херсонська, 53а",
+    "cityId": 673
   }
 }

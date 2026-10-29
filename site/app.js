@@ -1083,6 +1083,36 @@ const LABEL_SIDE = {
 };
 const LABEL_AT = { right: [15, -2, 'start'], left: [-15, -2, 'end'], above: [0, -28, 'middle'], below: [0, 26, 'middle'] };
 
+// Розставляє підписи по черзі: спершу ваше місто, далі в порядку списку міст (обласні раніше за малі).
+// Кожен підпис стає на перший бік, де не перекриває точки й інші підписи; якщо місця немає —
+// підпису не буде (ціна лишається в підказці при наведенні). Повертає Map місто → [x, y, anchor].
+function placeLabels(pts, here, map, diffOf) {
+  const boxes = pts.map(({ r, xy: [x, y] }) => {
+    const d = r === here ? 16 : r ? 9 : 6;
+    return [x - d, y - d, x + d, y + d];
+  });
+  const hit = (a) => a[0] < 0 || a[1] < 0 || a[2] > map.w || a[3] > map.h || boxes.some((b) => a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3]);
+  const out = new Map();
+  const order = pts.filter((p) => p.r).sort((a, b) => (b.r === here) - (a.r === here));
+  for (const { c, r, xy: [x, y] } of order) {
+    // Ширина на око: назва 13px, ціна 15.5px (+ відсоток 13px).
+    const pct = diffOf(r)?.cls ? diffOf(r).text.length * 7.5 + 5 : 0;
+    const w = Math.max(c.name.length * 7.2, fmtPrice(r.price).length * 9.5 + pct);
+    const sides = [LABEL_SIDE[c.slug] || 'right', 'right', 'left', 'above', 'below'];
+    for (const side of new Set(sides)) {
+      let [tx, ty, anchor] = LABEL_AT[side];
+      if (r === here) [tx, ty] = [tx * 1.5, ty * 1.25]; // підпис не налазить на кільце «ваше місто»
+      const left = x + tx - (anchor === 'end' ? w : anchor === 'middle' ? w / 2 : 0);
+      const box = [left, y + ty - 10, left + w, y + ty + 19];
+      if (hit(box) && r !== here) continue; // ваше місто підписуємо завжди
+      boxes.push(box);
+      out.set(c, [tx, ty, anchor]);
+      break;
+    }
+  }
+  return out;
+}
+
 async function renderCompare(el, p) {
   const [prices, map] = await Promise.all([loadCompare(p.id), loadMap().catch(() => null)]);
   if (!el.isConnected) return;
@@ -1150,18 +1180,18 @@ async function renderCompare(el, p) {
   let mapHtml = '';
   if (map) {
     const byCity = new Map(rows.map((r) => [r.c, r]));
-    const marks = state.cities
-      .filter((c) => c.lat != null)
-      .map((c) => {
-        const r = byCity.get(c);
-        const [x, y] = mapXY(map, c);
+    const pts = state.cities.filter((c) => c.lat != null).map((c) => ({ c, r: byCity.get(c), xy: mapXY(map, c) }));
+    const labels = placeLabels(pts, here, map, diffOf);
+    const marks = pts
+      .map(({ c, r, xy: [x, y] }) => {
         const at = `transform="translate(${x.toFixed(1)} ${y.toFixed(1)})"`;
         if (!r) return `<g class="mcity mcity--none" data-city="${c.slug}" ${at}><circle r="5"/></g>`;
-        let [tx, ty, anchor] = LABEL_AT[LABEL_SIDE[c.slug] || 'right'];
-        if (r === here) [tx, ty] = [tx * 1.5, ty * 1.25]; // підпис не налазить на кільце «ваше місто»
+        const lb = labels.get(c);
+        const text = lb
+          ? `<text class="mcity__label" x="${lb[0]}" y="${lb[1]}" text-anchor="${lb[2]}"><tspan class="mcity__name" x="${lb[0]}">${esc(c.name)}</tspan><tspan class="mcity__price" x="${lb[0]}" dy="17">${fmtPrice(r.price)}</tspan>${pctLabel(r)}</text>`
+          : '';
         return `<g class="mcity${r === here ? ' is-here' : ''}" data-city="${c.slug}" ${at} style="--tone:${tone(r.price)}">
-            ${r === here ? '<circle class="mcity__ring" r="15"/>' : ''}<circle class="mcity__dot" r="9"/>
-            <text class="mcity__label" x="${tx}" y="${ty}" text-anchor="${anchor}"><tspan class="mcity__name" x="${tx}">${esc(c.name)}</tspan><tspan class="mcity__price" x="${tx}" dy="17">${fmtPrice(r.price)}</tspan>${pctLabel(r)}</text>
+            ${r === here ? '<circle class="mcity__ring" r="15"/>' : ''}<circle class="mcity__dot" r="9"/>${text}
           </g>`;
       })
       .join('');

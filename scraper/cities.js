@@ -28,4 +28,5 @@ export const CITIES = [
   { slug: 'bila-tserkva', name: 'Біла Церква', lat: 49.796, lon: 30.131 },
   { slug: 'kremenchuk', name: 'Кременчук', lat: 49.066, lon: 33.41 },
   { slug: 'kamianske', name: "Кам'янське", lat: 48.507, lon: 34.613 },
+  { slug: 'krasyliv', name: 'Красилів', lat: 49.652, lon: 26.971 },
 ];

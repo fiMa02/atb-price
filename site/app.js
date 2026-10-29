@@ -1079,6 +1079,7 @@ const LABEL_SIDE = {
   uzhhorod: 'below',
   lviv: 'left',
   khmelnytskyi: 'below',
+  krasyliv: 'above',
 };
 const LABEL_AT = { right: [15, -2, 'start'], left: [-15, -2, 'end'], above: [0, -28, 'middle'], below: [0, 26, 'middle'] };
 

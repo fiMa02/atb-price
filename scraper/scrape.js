@@ -161,10 +161,7 @@ async function getCityStores(cityId, session) {
 async function probeStore(storeId) {
   const first = cheerio.load(await storePage(PROBE_CATEGORY, storeId));
   await sleep(DELAY_MS);
-  const pages = first('.product-pagination__link')
-    .map((_, a) => Number((first(a).attr('href') || '').match(/page=(\d+)/)?.[1] || 1))
-    .get();
-  const last = Math.max(1, ...pages);
+  const last = lastPageOf(first) || 1;
   if (last === 1) return first('article.catalog-item').length;
   const $ = cheerio.load(await storePage(`${PROBE_CATEGORY}?page=${last}`, storeId));
   await sleep(DELAY_MS);
@@ -214,8 +211,17 @@ function parseCards(html) {
       labels,
     });
   });
-  // Магазин, для якого сайт віддав сторінку, — щоб переконатися, що cookie спрацювала.
-  return { items, store: Number($('[data-load-more]').attr('data-store')) || null };
+  // Магазин, для якого сайт віддав сторінку (атрибут форми фільтрів), — щоб переконатися, що cookie спрацювала.
+  const store = Number($('form.catalog-filter[data-store]').first().attr('data-store')) || null;
+  return { items, store, lastPage: lastPageOf($) };
+}
+
+// Номер останньої сторінки з пагінації («1 2 3 4 5 6 … 11»); null — якщо пагінації немає.
+function lastPageOf($) {
+  const pages = $('.product-pagination__link')
+    .map((_, a) => Number(($(a).attr('href') || '').match(/page=(\d+)/)?.[1] || 1))
+    .get();
+  return pages.length ? Math.max(...pages) : null;
 }
 
 // Мітки товару: знижка («-20% до 27.10») і рекламні кампанії («DC» з підказкою «Безмежний всесвіт DC»).
@@ -249,12 +255,16 @@ async function productPage(href, storeId) {
 
 async function scrapeCategory(href, storeId, products) {
   const seenHere = new Set();
-  for (let page = 1; page < 500; page++) {
+  let last = 499;
+  for (let page = 1; page <= last; page++) {
     const html = await storePage(`${href}${page > 1 ? `?page=${page}` : ''}`, storeId);
     await sleep(DELAY_MS);
-    const { items, store } = parseCards(html);
-    if (store && store !== storeId) throw new Error(`сайт віддав магазин ${store} замість ${storeId}`);
-    // Сторінки після останньої повторюють останню — зупиняємось, коли сторінка нічого нового не дала.
+    const { items, store, lastPage } = parseCards(html);
+    if (!store) throw new Error(`${href}: на сторінці не знайдено номер магазину — змінилась розмітка сайту?`);
+    if (store !== storeId) throw new Error(`сайт віддав магазин ${store} замість ${storeId}`);
+    // Скільки сторінок — видно з пагінації першої сторінки; без неї розділ має одну сторінку.
+    if (page === 1) last = lastPage || 1;
+    // Про всяк випадок: сторінки після останньої повторюють останню.
     const fresh = items.filter((c) => !seenHere.has(c.id));
     if (!fresh.length) break;
     for (const c of fresh) {

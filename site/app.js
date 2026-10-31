@@ -163,6 +163,10 @@ function initTheme() {
 }
 initTheme();
 
+// Висота шапки — щоб «← назад» прилипав одразу під нею (шапка змінюється: фільтри, перенос рядків).
+const topBar = $('.top');
+new ResizeObserver(() => document.documentElement.style.setProperty('--top-h', `${topBar.offsetHeight}px`)).observe(topBar);
+
 // Вибір міста на комп'ютері: власне меню з пошуком (системний список з 26 міст незручний).
 // На сенсорних екранах лишається звичайний <select> — його показує CSS.
 function initCityMenu() {

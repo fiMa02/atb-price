@@ -534,9 +534,14 @@ button:hover, .btn:hover { border-color: var(--accent); }
 .btn--primary:hover { filter: brightness(1.08); }
 
 /* ---------- Сторінка товару ---------- */
+/* Прилипає під шапкою при прокрутці. */
 .back {
-  display: inline-flex; align-items: center; gap: 6px; margin: 16px 0 12px;
+  position: sticky; top: calc(var(--top-h, 60px) + 8px); z-index: 15;
+  display: block; width: fit-content; margin: 12px 0 8px; max-width: 100%;
+  padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line);
+  background: var(--header); -webkit-backdrop-filter: saturate(180%) blur(16px); backdrop-filter: saturate(180%) blur(16px);
   color: var(--ink-2); text-decoration: none; font-weight: 500; font-size: 14px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .back:hover { color: var(--accent); }
 .product {
